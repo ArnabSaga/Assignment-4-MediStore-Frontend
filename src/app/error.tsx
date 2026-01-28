@@ -45,7 +45,7 @@ export default function Error({
           <CardContent className="space-y-6">
             <div className="rounded-xl border border-border bg-background/40 p-4">
               <p className="text-sm text-muted-foreground">Error message:</p>
-              <p className="mt-1 wrap-break-word text-sm">
+              <p className="mt-1 break-works text-sm">
                 {error.message || "Unknown error"}
               </p>
 

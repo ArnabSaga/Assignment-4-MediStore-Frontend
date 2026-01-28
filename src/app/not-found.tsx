@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Home, Search } from "lucide-react";
+import { Home, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,18 +48,6 @@ export default function NotFound() {
                   <Search className="mr-2 h-4 w-4" />
                   Browse medicines
                 </Link>
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                className="justify-start sm:justify-center"
-                onClick={() => {
-                  if (typeof window !== "undefined") window.history.back();
-                }}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Go back
               </Button>
             </div>
 

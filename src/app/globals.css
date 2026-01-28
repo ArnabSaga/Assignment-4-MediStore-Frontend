@@ -3,6 +3,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================
+   THEME TOKENS
+============================ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -38,6 +41,9 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ============================
+   LIGHT MODE
+============================ */
 :root {
   --radius: 0.75rem;
 
@@ -65,9 +71,19 @@
   --border: #d4d4d4;
   --input: #d4d4d4;
 
-  --ring: #000000;
+  /* Brand buttons */
+  --button-primary: #118ab2;
+  --button-primary-foreground: #ffffff;
+
+  --button-accent: #52796f;
+  --button-accent-foreground: #0a0a0a;
+
+  --ring: #111111;
 }
 
+/* ============================
+   DARK MODE
+============================ */
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
@@ -93,9 +109,19 @@
   --border: rgba(255, 255, 255, 0.12);
   --input: rgba(255, 255, 255, 0.16);
 
-  --ring: #ffffff;
+  /* Brand buttons (same colors, dark-safe effects) */
+  --button-primary: #118ab2;
+  --button-primary-foreground: #ffffff;
+
+  --button-accent: #52796f;
+  --button-accent-foreground: #0a0a0a;
+
+  --ring: rgba(255, 255, 255, 0.75);
 }
 
+/* ============================
+   BASE STYLES
+============================ */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -125,7 +151,8 @@
   small { @apply text-sm text-muted-foreground; }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-offset-2 ring-offset-background;
+    ring-color: var(--button-primary);
   }
 
   input,
@@ -137,39 +164,68 @@
   input:hover,
   textarea:hover,
   select:hover {
-    border-color: var(--ring);
+    border-color: var(--button-primary);
   }
 
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    border-color: var(--ring);
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--button-primary) 35%, transparent);
   }
 }
 
+/* ============================
+   UTILITIES
+============================ */
 @layer utilities {
+  /* PRIMARY BUTTON */
   .btn-primary {
-    @apply bg-primary text-primary-foreground transition-all duration-200;
+    background-color: var(--button-primary) !important;
+    color: var(--button-primary-foreground) !important;
+    border-color: transparent !important;
+
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 200ms ease;
   }
 
   .btn-primary:hover {
-    filter: brightness(1.15);
-    box-shadow: 0 8px 24px -10px rgba(255, 255, 255, 0.25);
+    background-color: var(--button-primary) !important;
+    filter: brightness(1.06);
+    box-shadow: 0 10px 28px -14px
+      color-mix(in oklab, var(--button-primary) 70%, transparent);
   }
 
   .btn-primary:active {
     transform: translateY(1px) scale(0.98);
+    box-shadow: 0 6px 16px -12px
+      color-mix(in oklab, var(--button-primary) 55%, transparent);
   }
 
+  /* OUTLINE BUTTON */
   .btn-outline {
-    @apply border border-border bg-transparent text-foreground transition-all duration-200;
+    border: 1px solid
+      color-mix(in oklab, var(--button-primary) 70%, var(--border));
+    color: var(--foreground);
+    background: transparent;
+    transition: background-color 180ms ease, border-color 180ms ease,
+      color 180ms ease, transform 160ms ease;
   }
 
   .btn-outline:hover {
-    background: var(--accent);
+    background-color: color-mix(
+      in oklab,
+      var(--button-accent) 18%,
+      transparent
+    );
+    border-color: var(--button-accent);
   }
 
+  .btn-outline:active {
+    transform: scale(0.98);
+  }
+
+  /* CARDS */
   .card-surface {
     @apply bg-card text-card-foreground border border-border transition-all duration-300;
   }
@@ -181,6 +237,7 @@
       inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
+  /* LINKS */
   .link-hover {
     position: relative;
     transition: color 200ms ease;
@@ -201,6 +258,7 @@
     width: 100%;
   }
 
+  /* ICONS */
   .icon-hover {
     @apply transition-transform duration-200;
   }
