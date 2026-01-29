@@ -9,7 +9,7 @@ export default function PublicLayout({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-full px-4 py-8">{children}</main>
       <Footer />
     </div>
   );
