@@ -98,7 +98,7 @@ export function FeaturedProducts({
 }) {
   return (
     <section
-      className={cn("py-10 md:py-14 bg-zinc-200", className)}
+      className={cn("py-10 md:py-14 bg-zinc-100 dark:bg-zinc-900", className)}
       aria-labelledby="featured-products"
     >
       <div className="mx-auto max-w-6xl px-4">
