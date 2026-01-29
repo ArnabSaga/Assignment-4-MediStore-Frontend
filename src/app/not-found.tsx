@@ -19,8 +19,8 @@ export default function NotFound() {
               </CardTitle>
             </div>
             <p className="text-sm text-muted-foreground">
-              The page you&apos;re looking for doesn&apos;t exist or may have
-              been moved.
+              The medicine you&apos;re looking for may be unavailable or
+              discontinued.
             </p>
           </CardHeader>
 
