@@ -11,6 +11,14 @@ type Category = {
   image?: string;
 };
 
+type Promo = {
+  badge: string;
+  title: string;
+  description: string;
+  href: string;
+  image: string;
+};
+
 const categories: Category[] = [
   {
     title: "Vitamin",
@@ -39,6 +47,24 @@ const categories: Category[] = [
   },
 ];
 
+const promos: Promo[] = [
+  {
+    badge: "Up to 20% OFF",
+    title: "Vitamins & Supplements",
+    description:
+      "Daily essentials for immunity, energy, and wellness—delivered fast.",
+    href: "/shop?category=vitamin",
+    image: "/images/promos/promo-vitamins.jpg",
+  },
+  {
+    badge: "Doctor-trusted OTC",
+    title: "Cold, Allergy & Fever Care",
+    description: "Relief for seasonal allergies, cough, and fever—shop safely.",
+    href: "/shop?category=allergy",
+    image: "/images/promos/promo-cold-allergy.jpg",
+  },
+];
+
 export function FeaturedCategories({
   className,
   heading = "Featured Categories",
@@ -52,6 +78,7 @@ export function FeaturedCategories({
       aria-labelledby="featured-categories"
     >
       <div className="mx-auto max-w-6xl px-4">
+        {/* Header */}
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2
@@ -73,7 +100,7 @@ export function FeaturedCategories({
           </Link>
         </div>
 
-        {/* Desktop grid / Mobile horizontal scroll */}
+        {/* Categories: Desktop grid / Mobile horizontal scroll */}
         <div className="flex gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-5">
           {categories.map((cat) => (
             <Link
@@ -83,7 +110,6 @@ export function FeaturedCategories({
             >
               <Card className="overflow-hidden border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                 <CardContent className="p-0">
-                  {/* Image area */}
                   <div className="relative h-44 w-full bg-muted md:h-48">
                     {cat.image ? (
                       <Image
@@ -97,7 +123,6 @@ export function FeaturedCategories({
                     <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-border/40" />
                   </div>
 
-                  {/* Text */}
                   <div className="p-4">
                     <p className="text-sm font-semibold">{cat.title}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -118,6 +143,54 @@ export function FeaturedCategories({
           >
             View all categories <ArrowUpRight className="ml-2 h-4 w-4" />
           </Link>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          {promos.map((p) => (
+            <Link key={p.title} href={p.href} className="group">
+              <Card className="overflow-hidden border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                <CardContent className="relative p-0">
+                  {/* Background image */}
+                  <div className="relative h-55 w-full md:h-65">
+                    <Image
+                      src={p.image}
+                      alt={p.title}
+                      fill
+                      sizes="(max-width: 768px) 120vw, 50vw"
+                      className="object-cover"
+                      priority={false}
+                    />
+
+                    {/* Overlay for readability (works for both light/dark) */}
+                    <div className="absolute inset-0 bg-linear-to-r from-background/95 via-background/80 to-background/20 dark:from-background/95 dark:via-background/85 dark:to-background/30" />
+
+                    {/* Content */}
+                    <div className="absolute inset-0 flex flex-col justify-between p-6 md:p-8">
+                      <div>
+                        <span className="inline-flex w-fit rounded-full border border-border bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+                          {p.badge}
+                        </span>
+
+                        <h3 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">
+                          {p.title}
+                        </h3>
+
+                        <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+                          {p.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="btn-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm">
+                          Shop Now <ArrowUpRight className="h-4 w-4" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
       </div>
     </section>
