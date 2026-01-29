@@ -47,7 +47,7 @@ export default function ContactPage() {
                         MediStore Support
                       </p>
                       <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                        Let’s talk
+                        Let&apos;s talk
                       </h2>
 
                       <div className="mt-6 space-y-4 text-sm">

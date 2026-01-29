@@ -69,7 +69,7 @@ export function Navbar({
   React.useEffect(() => {
     lastY.current = window.scrollY;
 
-    const THRESHOLD = 12; 
+    const THRESHOLD = 12;
     const HIDE_AFTER = 80;
 
     const update = () => {
@@ -123,15 +123,17 @@ export function Navbar({
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           {/* Logo */}
-          <Link href={logo.url} className="flex items-center gap-2">
-            <Image
-              width={28}
-              height={28}
-              src={logo.src}
-              alt={logo.alt}
-              className={cn("h-16 w-16 ", logo.className)}
-              priority
-            />
+          <Link href="/" className="group inline-flex items-center gap-3">
+            <span className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-xl border border-border bg-card">
+              <Image
+                src="/icons/logo.png"
+                alt="MediStore"
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain"
+                priority
+              />
+            </span>
             <span className="text-base font-semibold tracking-tight">
               {/* {logo.title} */}
               <p>
