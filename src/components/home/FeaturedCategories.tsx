@@ -100,17 +100,31 @@ export function FeaturedCategories({
           </Link>
         </div>
 
-        {/* Categories: Desktop grid / Mobile horizontal scroll */}
-        <div className="flex gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-5">
+        {/* Categories */}
+        <div
+          className="
+            flex gap-4 overflow-x-auto pb-2
+            snap-x snap-mandatory
+            [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+            sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 sm:snap-none
+            lg:grid-cols-5
+          "
+        >
           {categories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/shop?category=${encodeURIComponent(cat.slug)}`}
-              className="group min-w-55 sm:min-w-0"
+              className="group snap-start"
             >
-              <Card className="overflow-hidden border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+              <Card
+                className="
+                  w-55 overflow-hidden border-border bg-card text-card-foreground
+                  transition-all duration-300 hover:-translate-y-1 hover:shadow-md
+                  sm:w-auto
+                "
+              >
                 <CardContent className="p-0">
-                  <div className="relative h-44 w-full bg-muted md:h-48">
+                  <div className="relative h-40 w-full bg-muted sm:h-44 lg:h-48">
                     {cat.image ? (
                       <Image
                         src={cat.image}
@@ -145,24 +159,24 @@ export function FeaturedCategories({
           </Link>
         </div>
 
+        {/* Promos */}
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {promos.map((p) => (
             <Link key={p.title} href={p.href} className="group">
               <Card className="overflow-hidden border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-                <CardContent className="relative p-0">
-                  {/* Background image */}
-                  <div className="relative h-55 w-full md:h-65">
+                <CardContent className="p-0">
+                  <div className="relative h-55 w-full overflow-hidden md:h-65">
                     <Image
                       src={p.image}
                       alt={p.title}
                       fill
-                      sizes="(max-width: 768px) 120vw, 50vw"
-                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                       priority={false}
                     />
 
-                    {/* Overlay for readability (works for both light/dark) */}
-                    <div className="absolute inset-0 bg-linear-to-r from-background/95 via-background/80 to-background/20 dark:from-background/95 dark:via-background/85 dark:to-background/30" />
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-linear-to-r from-background/95 via-background/80 to-background/25 dark:from-background/95 dark:via-background/85 dark:to-background/30" />
 
                     {/* Content */}
                     <div className="absolute inset-0 flex flex-col justify-between p-6 md:p-8">
@@ -171,17 +185,17 @@ export function FeaturedCategories({
                           {p.badge}
                         </span>
 
-                        <h3 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">
+                        <h3 className="mt-4 max-w-md text-2xl font-semibold tracking-tight md:text-3xl">
                           {p.title}
                         </h3>
 
-                        <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+                        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
                           {p.description}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="btn-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm">
+                      <div>
+                        <span className="btn-primary inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm">
                           Shop Now <ArrowUpRight className="h-4 w-4" />
                         </span>
                       </div>
