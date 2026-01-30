@@ -150,7 +150,7 @@ export default function AdminLayout({
     <div className="h-[calc(100vh-56px)] w-full overflow-hidden">
       <div className="flex h-full w-full">
         {/* Sidebar */}
-        <aside className="hidden w-[260px] shrink-0 border-r bg-background lg:block">
+        <aside className="hidden w-65 shrink-0 border-r bg-background lg:block">
           <div className="flex h-full flex-col p-4 overflow-hidden">
             <div className="mb-4">
               <Link href="/admin" className="flex items-center mb-4 gap-2">
