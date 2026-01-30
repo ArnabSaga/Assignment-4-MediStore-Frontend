@@ -2,37 +2,93 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { useRouter, useSearchParams } from "next/navigation";
+import * as z from "zod";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useForm } from "@tanstack/react-form";
+import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
+
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+const formSchema = z
+  .object({
+    name: z.string().min(1, "Full name is required"),
+    email: z.string().email("Please enter a valid email"),
+    password: z.string().min(8, "Minimum 8 characters"),
+    confirmPassword: z.string().min(8, "Minimum 8 characters"),
+    role: z.enum(["CUSTOMER", "SELLER"]),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 export function RegisterForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || "/";
+
   const [pending, setPending] = React.useState(false);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setPending(true);
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      role: "CUSTOMER",
+    },
+    validators: {
+      onSubmit: formSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setPending(true);
+      const toastId = toast.loading("Creating account…");
 
-    // TODO: better-auth signup here
-    // await authClient.signUp.email({ ... })
+      try {
+        const { confirmPassword, ...payload } = value;
 
-    setTimeout(() => setPending(false), 700);
-  }
+        const { error } = await authClient.signUp.email(payload);
+
+        if (error) {
+          toast.error(error.message ?? "Signup failed", { id: toastId });
+          return;
+        }
+
+        toast.success("Account created successfully 🎉", { id: toastId });
+
+        router.refresh();
+        router.push(next);
+
+        form.reset();
+      } catch {
+        toast.error("Something went wrong. Please try again.", { id: toastId });
+      } finally {
+        setPending(false);
+      }
+    },
+  });
 
   return (
     <form
-      onSubmit={onSubmit}
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit();
+      }}
       className={cn("flex flex-col gap-6", className)}
       {...props}
     >
@@ -42,93 +98,133 @@ export function RegisterForm({
             Create your MediStore account
           </h1>
           <p className="text-sm text-muted-foreground">
-            Sign up to start ordering trusted OTC medicines.
+            Sign up to start using MediStore.
           </p>
         </div>
 
-        <Field>
-          <FieldLabel htmlFor="name">Full name</FieldLabel>
-          <Input
-            id="name"
-            name="name"
-            placeholder="John Doe"
-            autoComplete="name"
-            required
-          />
-        </Field>
+        <form.Field name="name">
+          {(field) => {
+            const isInvalid =
+              field.state.meta.isTouched && !field.state.meta.isValid;
 
-        <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
-          />
-          <FieldDescription>
-            We’ll only use this to contact you.
-          </FieldDescription>
-        </Field>
+            return (
+              <Field>
+                <FieldLabel>Full name</FieldLabel>
+                <Input
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
 
-        <Field>
-          <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
-          <FieldDescription>Minimum 8 characters.</FieldDescription>
-        </Field>
+        <form.Field name="email">
+          {(field) => {
+            const isInvalid =
+              field.state.meta.isTouched && !field.state.meta.isValid;
 
-        <Field>
-          <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
-          <Input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
-        </Field>
+            return (
+              <Field>
+                <FieldLabel>Email</FieldLabel>
+                <Input
+                  type="email"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                <FieldDescription>
+                  We’ll only use this to contact you.
+                </FieldDescription>
+              </Field>
+            );
+          }}
+        </form.Field>
 
-        <Field>
-          <Button
-            type="submit"
-            className="btn-primary w-full"
-            disabled={pending}
-          >
-            {pending ? "Creating account..." : "Create account"}
-          </Button>
-        </Field>
+        <form.Field name="role">
+          {(field) => (
+            <Field>
+              <FieldLabel>I am a</FieldLabel>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={field.state.value}
+                onChange={(e) =>
+                  field.handleChange(e.target.value as "CUSTOMER" | "SELLER")
+                }
+              >
+                <option value="CUSTOMER">Customer (Buy medicines)</option>
+                <option value="SELLER">Seller (Sell medicines)</option>
+              </select>
+              <FieldDescription>
+                This helps us personalise your MediStore experience.
+              </FieldDescription>
+            </Field>
+          )}
+        </form.Field>
+
+        <form.Field name="password">
+          {(field) => {
+            const isInvalid =
+              field.state.meta.isTouched && !field.state.meta.isValid;
+
+            return (
+              <Field>
+                <FieldLabel>Password</FieldLabel>
+                <Input
+                  type="password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
+
+        <form.Field name="confirmPassword">
+          {(field) => {
+            const isInvalid =
+              field.state.meta.isTouched && !field.state.meta.isValid;
+
+            return (
+              <Field>
+                <FieldLabel>Confirm password</FieldLabel>
+                <Input
+                  type="password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
+
+        <Button type="submit" className="btn-primary w-full" disabled={pending}>
+          {pending ? "Creating account..." : "Create account"}
+        </Button>
 
         <FieldSeparator>Or</FieldSeparator>
 
         <Field>
-          <Button
-            variant="outline"
-            type="button"
-            className="btn-outline w-full"
-            disabled={pending}
-          >
-            <svg
-              className="mr-2 h-4 w-4"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                fill="currentColor"
-              />
-            </svg>
+          <Button variant="outline" className="w-full" type="button">
             Continue with Google
           </Button>
 
-          <FieldDescription className="mt-3 text-center text-sm">
+          <FieldDescription className="mt-3 text-center">
             Already have an account?{" "}
             <Link href="/login" className="underline underline-offset-4">
               Login

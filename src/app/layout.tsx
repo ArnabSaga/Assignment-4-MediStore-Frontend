@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 
+import { Toaster } from "@/components/ui/sonner";
+
 const inter = localFont({
   src: "./fonts/InterVf.ttf",
   variable: "--font-inter",
@@ -28,7 +30,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="dark">
-      <body className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
+      <body
+        className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -36,6 +40,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster richColors/>
         </ThemeProvider>
       </body>
     </html>

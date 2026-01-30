@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -9,30 +10,85 @@ import { Input } from "@/components/ui/input";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
 } from "@/components/ui/field";
 
+import { authClient } from "@/lib/auth-client";
+import { useForm } from "@tanstack/react-form";
+import { toast } from "sonner";
+import * as z from "zod";
+
+const formSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(8, "Minimum length is 8"),
+});
+
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || "/"; 
+
   const [pending, setPending] = React.useState(false);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const form = useForm({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    validators: {
+      onSubmit: formSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setPending(true);
+      const toastId = toast.loading("Logging in…");
+
+      try {
+        const { error } = await authClient.signIn.email(value);
+
+        if (error) {
+          toast.error(error.message ?? "Login failed", { id: toastId });
+          return;
+        }
+
+        toast.success("Welcome back to MediStore 💊", { id: toastId });
+
+        router.refresh();
+        router.push(next);
+      } catch {
+        toast.error("Something went wrong, please try again.", { id: toastId });
+      } finally {
+        setPending(false);
+      }
+    },
+  });
+
+  const handleGoogleLogin = async () => {
+    if (pending) return;
     setPending(true);
 
-    // TODO: integrate better-auth here (signIn)
-    // await authClient.signIn.email({ email, password });
-
-    setTimeout(() => setPending(false), 600);
-  }
+    try {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: next,
+      });
+    } catch {
+      toast.error("Google sign-in failed. Please try again.");
+      setPending(false);
+    }
+  };
 
   return (
     <form
-      onSubmit={onSubmit}
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit();
+      }}
       className={cn("flex flex-col gap-6", className)}
       {...props}
     >
@@ -46,37 +102,65 @@ export function LoginForm({
           </p>
         </div>
 
-        <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
-          />
-        </Field>
+        <form.Field
+          name="email"
+          children={(field) => {
+            const isInvalid =
+              field.state.meta.isTouched && !field.state.meta.isValid;
 
-        <Field>
-          <div className="flex items-center justify-between gap-3">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Link
-              href="/forgot-password"
-              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
+            return (
+              <Field>
+                <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  required
+                />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        />
 
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        </Field>
+        <form.Field
+          name="password"
+          children={(field) => {
+            const isInvalid =
+              field.state.meta.isTouched && !field.state.meta.isValid;
+
+            return (
+              <Field>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="password"
+                  autoComplete="current-password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  required
+                />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        />
 
         <Field>
           <Button
@@ -96,6 +180,7 @@ export function LoginForm({
             type="button"
             className="btn-outline w-full"
             disabled={pending}
+            onClick={handleGoogleLogin}
           >
             <svg
               className="mr-2 h-4 w-4"
