@@ -136,17 +136,13 @@ export function Navbar({
 
   const role = user?.role;
 
-  // ✅ Dashboard route based on role (admin/seller only)
   const dashboardHref =
     role === "ADMIN"
       ? "/admin"
       : role === "SELLER"
         ? "/seller/dashboard"
-        : "/account"; // not used for CUSTOMER (per your rule)
+        : "/account"; 
 
-  // ✅ Menu rules
-  // ADMIN/SELLER => only Dashboard
-  // CUSTOMER => Orders/Cart/Profile (no Dashboard)
   const menuItems:
     | { label: string; href: string; icon: React.ElementType }[]
     | [] = !role
@@ -189,7 +185,6 @@ export function Navbar({
 
   return (
     <>
-      {/* Spacer so fixed header doesn't cover content */}
       <div className="h-16" />
 
       <header
