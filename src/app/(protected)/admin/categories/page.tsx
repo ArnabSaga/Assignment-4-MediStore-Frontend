@@ -459,12 +459,6 @@ export default function AdminCategoriesPage() {
       </div>
 
       <Separator />
-
-      <p className="text-xs text-muted-foreground">
-        Update uses{" "}
-        <span className="font-medium">PUT /api/v1/categories/:id</span> (your
-        backend route). Create uses POST and delete uses DELETE.
-      </p>
     </main>
   );
 }

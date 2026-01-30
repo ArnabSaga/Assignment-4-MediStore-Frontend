@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -9,13 +10,13 @@ import {
   Package,
   ShoppingBag,
   ShieldAlert,
+  LogOut,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import Image from "next/image";
 import { ModeToggle } from "@/components/layout/ModeToggle";
 
 type Role = "CUSTOMER" | "SELLER" | "ADMIN";
@@ -26,6 +27,7 @@ type SessionUser = {
   email: string;
   role: Role;
   image?: string | null;
+  isBanned?: boolean;
 };
 
 type BetterAuthSessionResult =
@@ -46,6 +48,7 @@ async function getUserFromSession(): Promise<SessionUser | null> {
     email: u.email,
     role: (u.role ?? "CUSTOMER") as Role,
     image: u.image ?? null,
+    isBanned: !!u.isBanned,
   };
 }
 
@@ -93,22 +96,24 @@ export default function AdminLayout({
 
     (async () => {
       const u = await getUserFromSession();
-
       if (!mounted) return;
 
-      setUser(u);
-
-      // 🔒 Role guard
       if (!u) {
         router.replace("/login");
         return;
       }
 
-      if (u.role !== "ADMIN") {
-        router.replace("/"); // change to "/shop" if you want
+      if (u.isBanned) {
+        router.replace("/");
         return;
       }
 
+      if (u.role !== "ADMIN") {
+        router.replace("/");
+        return;
+      }
+
+      setUser(u);
       setAllowed(true);
       setLoading(false);
     })().catch(() => {
@@ -121,9 +126,17 @@ export default function AdminLayout({
     };
   }, [router]);
 
+  const logout = async () => {
+    try {
+      await authClient.signOut();
+    } finally {
+      router.replace("/login");
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <div className="flex min-h-screen  items-center justify-center p-6">
         <div className="text-sm text-muted-foreground">
           Loading admin panel…
         </div>
@@ -134,16 +147,17 @@ export default function AdminLayout({
   if (!allowed) return null;
 
   return (
-    <div className="min-h-screen">
-      <div className="grid min-h-screen lg:grid-cols-[260px_1fr]">
+    <div className="h-[calc(100vh-56px)] w-full overflow-hidden">
+      <div className="flex h-full w-full">
         {/* Sidebar */}
-        <aside className="hidden border-r bg-background lg:block">
-          <div className="flex h-full flex-col p-4">
-            <div className="mb-4 ">
+        <aside className="hidden w-[260px] shrink-0 border-r bg-background lg:block">
+          <div className="flex h-full flex-col p-4 overflow-hidden">
+            <div className="mb-4">
               <Link href="/admin" className="flex items-center mb-4 gap-2">
                 <ShieldAlert className="h-5 w-5" />
                 <span className="font-semibold">Admin Panel</span>
               </Link>
+
               <div className="flex items-center gap-3">
                 <span className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-xl border border-border bg-card">
                   <Image
@@ -192,12 +206,13 @@ export default function AdminLayout({
             </nav>
 
             <div className="mt-auto pt-4">
-              {/* Theme toggle */}
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Theme</span>
                 <ModeToggle />
               </div>
+
               <Separator className="my-3" />
+
               <div className="text-xs text-muted-foreground pb-2">
                 Signed in as{" "}
                 <span className="font-medium text-foreground">
@@ -207,36 +222,36 @@ export default function AdminLayout({
               <div className="text-xs text-muted-foreground truncate">
                 {user?.email}
               </div>
-
-              <div className="mt-3 flex gap-2">
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link href="/">Go to site</Link>
-                </Button>
-              </div>
             </div>
           </div>
         </aside>
 
-        {/* Main */}
-        <div className="flex min-w-0 flex-col">
+        {/* ✅ Main content fills ALL remaining width */}
+        <div className="flex min-w-0 flex-1 flex-col">
           {/* Topbar */}
-          <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
+          <header className="sticky top-0 z-20 w-full border-b bg-background/80 backdrop-blur">
             <div className="flex h-14 items-center justify-between px-4">
-              <div className="text-sm text-muted-foreground">
-                Welcome,{" "}
-                <span className="text-foreground font-medium">
-                  {user?.name}
-                </span>
-              </div>
               <div className="flex items-center gap-2">
                 <Button asChild variant="outline" size="sm">
                   <Link href="/">View site</Link>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void logout()}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
                 </Button>
               </div>
             </div>
           </header>
 
-          <main className="min-w-0 p-4 md:p-6">{children}</main>
+          {/* ✅ children covers the rest */}
+          <main className="flex-1 min-w-0 w-full overflow-y-auto p-4 md:p-6">
+            {children}
+          </main>
         </div>
       </div>
     </div>

@@ -414,15 +414,6 @@ export default function AdminUsersPage() {
           </TableBody>
         </Table>
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        Backend routes used:{" "}
-        <span className="font-medium">
-          GET /api/v1/admin/users, PATCH /:id/status, PATCH /:id/role, DELETE
-          /:id
-        </span>
-        .
-      </p>
     </main>
   );
 }

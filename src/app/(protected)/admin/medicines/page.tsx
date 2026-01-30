@@ -47,7 +47,7 @@ type Medicine = {
   imageUrl?: string | null;
   isActive: boolean;
   manufacturer: string;
-  price: number; // backend returns Decimal; but JSON gives number/string; we normalize
+  price: number; 
   stock: number;
   createdAt: string;
   updatedAt: string;
@@ -515,16 +515,6 @@ export default function AdminMedicinesPage() {
       </div>
 
       <Separator />
-
-      <p className="text-xs text-muted-foreground">
-        Update:{" "}
-        <span className="font-medium">PUT /api/v1/admin/medicines/:id</span> •
-        Delete:{" "}
-        <span className="font-medium">DELETE /api/v1/admin/medicines/:id</span>{" "}
-        • Listing uses{" "}
-        <span className="font-medium">GET /api/v1/medicines</span> (public).
-      </p>
-
       {/* Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
