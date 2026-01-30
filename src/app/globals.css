@@ -126,23 +126,19 @@
   * {
     @apply border-border outline-ring/50;
   }
-  
-  html,
-  body {
-    overflow-x: hidden;
-  }
 
   html {
-    font-size: 16px;
-    text-rendering: optimizeLegibility;
+    scrollbar-gutter: stable;
+    background: var(--background);
   }
 
   body {
     @apply bg-background text-foreground antialiased;
+    background: var(--background);
+    overflow-x: hidden;
+    overflow-y: auto;
     font-family: var(--font-inter);
-    font-feature-settings:
-      "liga" 1,
-      "calt" 1;
+    font-feature-settings: "liga" 1, "calt" 1;
   }
 
   h1,
@@ -255,13 +251,17 @@
 
   /* CARDS */
   .card-surface {
-    @apply bg-card text-card-foreground border border-border transition-all duration-300;
+    @apply bg-card text-card-foreground border border-border;
   }
 
-  .card-surface:hover {
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+
+  .card-hover:hover {
     transform: translateY(-4px);
     box-shadow:
-      0 16px 40px -16px rgba(0, 0, 0, 0.6),
+      0 16px 40px -16px rgba(0, 0, 0, 0.25),
       inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 

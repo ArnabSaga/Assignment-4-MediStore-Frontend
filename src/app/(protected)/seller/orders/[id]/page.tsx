@@ -1,0 +1,372 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+type OrderStatus =
+  | "PLACED"
+  | "PROCESSING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED";
+
+type OrderItem = {
+  id: string;
+  quantity: number;
+  price: number;
+  medicine?: {
+    id: string;
+    name: string;
+    image?: string | null;
+  } | null;
+};
+
+type SellerOrderDetails = {
+  id: string;
+  status: OrderStatus;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  customer?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  items: OrderItem[];
+};
+
+type ApiResponse<T> = {
+  success: boolean;
+  message?: string;
+  data?: T;
+};
+
+type ApiListResponse<T> = {
+  success: boolean;
+  message?: string;
+  meta?: { page?: number; limit?: number };
+  data?: T;
+};
+
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+
+function formatBDT(amount: number) {
+  try {
+    return new Intl.NumberFormat("en-BD", {
+      style: "currency",
+      currency: "BDT",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `৳${Math.round(amount)}`;
+  }
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
+}
+
+const STATUS_OPTIONS: OrderStatus[] = [
+  "PLACED",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+];
+
+async function fetchSellerOrderById(id: string): Promise<SellerOrderDetails> {
+  const res = await fetch(
+    `${BACKEND_URL}/api/v1/seller/orders?limit=200&page=1`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+
+  const json = (await res.json().catch(() => null)) as ApiListResponse<
+    SellerOrderDetails[]
+  > | null;
+
+  if (!res.ok) {
+    throw new Error(json?.message || `Failed to load orders (${res.status})`);
+  }
+  if (!json?.success) {
+    throw new Error(json?.message || "Failed to load orders");
+  }
+
+  const list = Array.isArray(json.data) ? json.data : [];
+  const found = list.find((o) => o.id === id);
+
+  if (!found) throw new Error("Order not found for this seller.");
+  return found;
+}
+
+async function updateOrderStatus(id: string, status: OrderStatus) {
+  const res = await fetch(`${BACKEND_URL}/api/v1/seller/orders/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+
+  const json = (await res
+    .json()
+    .catch(() => null)) as ApiResponse<SellerOrderDetails> | null;
+
+  if (!res.ok) {
+    throw new Error(json?.message || `Failed to update status (${res.status})`);
+  }
+  if (!json?.success || !json.data) {
+    throw new Error(json?.message || "Failed to update status");
+  }
+
+  return json.data;
+}
+
+export default function SellerOrderDetailsPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const [order, setOrder] = React.useState<SellerOrderDetails | null>(null);
+  const [status, setStatus] = React.useState<OrderStatus>("PLACED");
+
+  const load = React.useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchSellerOrderById(id);
+      setOrder(data);
+      setStatus(data.status);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load order");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const subtotal = React.useMemo(() => {
+    if (!order) return 0;
+    return order.items.reduce((sum, it) => sum + it.price * it.quantity, 0);
+  }, [order]);
+
+  const onSaveStatus = async () => {
+    if (!order) return;
+    if (status === order.status) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updateOrderStatus(order.id, status);
+      setOrder(updated);
+      setStatus(updated.status);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update status");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <main className="space-y-6 p-4 md:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/seller/order">Back</Link>
+            </Button>
+            <h1 className="text-xl font-semibold">Order Details</h1>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {id ? `Order ID: ${id}` : ""}
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={() => void load()}
+          disabled={loading || saving}
+        >
+          Refresh
+        </Button>
+      </div>
+
+      {error ? (
+        <div className="rounded-lg border p-4">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="rounded-lg border p-6">Loading…</div>
+      ) : !order ? (
+        <div className="rounded-lg border p-6">Order not found.</div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Items */}
+          <section className="lg:col-span-2 rounded-lg border">
+            <div className="p-4">
+              <h2 className="font-semibold">Items</h2>
+              <p className="text-sm text-muted-foreground">
+                {order.items.length} item(s)
+              </p>
+            </div>
+            <Separator />
+
+            <div className="p-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Medicine</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Line total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {order.items.map((it) => (
+                    <TableRow key={it.id}>
+                      <TableCell className="font-medium">
+                        {it.medicine?.name ?? "Medicine"}
+                        <div className="text-xs text-muted-foreground">
+                          {it.medicine?.id ?? ""}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatBDT(it.price)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {it.quantity}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatBDT(it.price * it.quantity)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-semibold">
+                      Subtotal
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatBDT(subtotal)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </section>
+
+          {/* Summary + Status */}
+          <aside className="rounded-lg border h-fit">
+            <div className="p-4 space-y-3">
+              <h2 className="font-semibold">Summary</h2>
+
+              <div className="text-sm space-y-1">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="text-right">
+                    {formatDate(order.createdAt)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Updated</span>
+                  <span className="text-right">
+                    {formatDate(order.updatedAt)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Customer</span>
+                  <span className="text-right">
+                    {order.customer?.name ?? "Customer"}
+                  </span>
+                </div>
+                {order.customer?.email ? (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Email</span>
+                    <span className="text-right">{order.customer.email}</span>
+                  </div>
+                ) : null}
+
+                <Separator className="my-2" />
+
+                <div className="flex justify-between gap-3 text-base font-semibold">
+                  <span>Total</span>
+                  <span className="text-right">
+                    {formatBDT(order.totalAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Order Status</p>
+
+                <Select
+                  value={status}
+                  onValueChange={(v) => setStatus(v as OrderStatus)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  className="w-full"
+                  onClick={() => void onSaveStatus()}
+                  disabled={saving || status === order.status}
+                >
+                  {saving ? "Saving…" : "Update Status"}
+                </Button>
+
+                <p className="text-xs text-muted-foreground">
+                  Current status:{" "}
+                  <span className="font-medium">{order.status}</span>
+                </p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+    </main>
+  );
+}

@@ -15,6 +15,7 @@
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-navigation-menu": "^1.2.14",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-form": "^1.28.0",
@@ -28,7 +29,8 @@
     "react-dom": "19.2.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zod3": "npm:zod@^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
