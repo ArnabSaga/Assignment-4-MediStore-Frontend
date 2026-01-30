@@ -7,7 +7,6 @@ import {
   Menu,
   LogOut,
   LayoutDashboard,
-  Package,
   ShoppingBag,
   User2,
 } from "lucide-react";
@@ -136,28 +135,47 @@ export function Navbar({
   }, []);
 
   const role = user?.role;
-  const routes =
-    role === "SELLER"
-      ? {
-          dashboard: "/seller/dashboard",
-          orders: "/seller/orders",
-          profile: "/seller/profile", 
-          secondary: {
-            href: "/seller/medicines",
-            label: "Medicines",
-            icon: Package,
+
+  // ✅ Dashboard route based on role (admin/seller only)
+  const dashboardHref =
+    role === "ADMIN"
+      ? "/admin"
+      : role === "SELLER"
+        ? "/seller/dashboard"
+        : "/account"; // not used for CUSTOMER (per your rule)
+
+  // ✅ Menu rules
+  // ADMIN/SELLER => only Dashboard
+  // CUSTOMER => Orders/Cart/Profile (no Dashboard)
+  const menuItems:
+    | { label: string; href: string; icon: React.ElementType }[]
+    | [] = !role
+    ? []
+    : role === "ADMIN" || role === "SELLER"
+      ? [
+          {
+            label: "Dashboard",
+            href: dashboardHref,
+            icon: LayoutDashboard,
           },
-        }
-      : {
-          dashboard: "/account",
-          orders: "/account/orders",
-          profile: "/account/profile",
-          secondary: {
-            href: "/account/cart",
-            label: "Cart",
+        ]
+      : [
+          {
+            label: "Orders",
+            href: "/account/orders",
             icon: ShoppingBag,
           },
-        };
+          {
+            label: "Cart",
+            href: "/account/cart",
+            icon: ShoppingBag,
+          },
+          {
+            label: "Profile",
+            href: "/account/profile",
+            icon: User2,
+          },
+        ];
 
   const handleLogout = async () => {
     try {
@@ -171,6 +189,7 @@ export function Navbar({
 
   return (
     <>
+      {/* Spacer so fixed header doesn't cover content */}
       <div className="h-16" />
 
       <header
@@ -243,6 +262,7 @@ export function Navbar({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent align="end" className="w-56">
+                  {/* Top */}
                   <DropdownMenuLabel className="space-y-1">
                     <p className="text-sm font-medium leading-none">
                       {user.name ?? "Account"}
@@ -259,48 +279,22 @@ export function Navbar({
 
                   <DropdownMenuSeparator />
 
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={routes.dashboard}
-                      className="flex items-center gap-2"
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={routes.orders}
-                      className="flex items-center gap-2"
-                    >
-                      <ShoppingBag className="h-4 w-4" />
-                      Orders
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={routes.secondary.href}
-                      className="flex items-center gap-2"
-                    >
-                      <routes.secondary.icon className="h-4 w-4" />
-                      {routes.secondary.label}
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={routes.profile}
-                      className="flex items-center gap-2"
-                    >
-                      <User2 className="h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
+                  {/* Middle menu (role-based) */}
+                  {menuItems.map((item) => (
+                    <DropdownMenuItem asChild key={item.href}>
+                      <Link
+                        href={item.href}
+                        className="flex items-center gap-2"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
 
                   <DropdownMenuSeparator />
 
+                  {/* Bottom */}
                   <DropdownMenuItem
                     onClick={handleLogout}
                     className="flex items-center gap-2 text-destructive focus:text-destructive"
@@ -372,40 +366,34 @@ export function Navbar({
                 <div className="mt-6 flex flex-col gap-3">
                   {loading ? null : user ? (
                     <>
-                      <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
-                            {user.name ?? "Account"}
+                      {/* Top */}
+                      <div className="rounded-xl border bg-card p-3">
+                        <p className="truncate text-sm font-medium">
+                          {user.name ?? "Account"}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {user.email ?? ""}
+                        </p>
+                        {role ? (
+                          <p className="text-[11px] text-muted-foreground">
+                            Role: {role}
                           </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {user.email ?? ""}
-                          </p>
-                          {role ? (
-                            <p className="text-[11px] text-muted-foreground">
-                              Role: {role}
-                            </p>
-                          ) : null}
-                        </div>
+                        ) : null}
                       </div>
 
-                      <Button asChild variant="outline" className="btn-outline">
-                        <Link href={routes.dashboard}>Dashboard</Link>
-                      </Button>
+                      {/* Middle menu (role-based) */}
+                      {menuItems.map((item) => (
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="btn-outline"
+                          key={item.href}
+                        >
+                          <Link href={item.href}>{item.label}</Link>
+                        </Button>
+                      ))}
 
-                      <Button asChild variant="outline" className="btn-outline">
-                        <Link href={routes.orders}>Orders</Link>
-                      </Button>
-
-                      <Button asChild variant="outline" className="btn-outline">
-                        <Link href={routes.secondary.href}>
-                          {routes.secondary.label}
-                        </Link>
-                      </Button>
-
-                      <Button asChild variant="outline" className="btn-outline">
-                        <Link href={routes.profile}>Profile</Link>
-                      </Button>
-
+                      {/* Bottom */}
                       <Button
                         variant="outline"
                         className="btn-outline"
