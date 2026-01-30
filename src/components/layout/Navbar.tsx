@@ -178,8 +178,8 @@ export function Navbar({
       await authClient.signOut();
       await refresh();
       window.location.href = "/";
-    } catch {
-      // ignore
+    } catch (error) {
+      console.log(error)
     }
   };
 
