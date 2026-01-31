@@ -7,9 +7,16 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, Menu, Package, ShoppingBag } from "lucide-react";
+import {
+  LayoutDashboard,
+  Menu,
+  Package,
+  ShoppingBag,
+  LogOut,
+} from "lucide-react";
 
 import { useSession } from "@/hooks/use-session";
 import { ModeToggle } from "@/components/layout/ModeToggle";
@@ -48,7 +55,13 @@ function SidebarNavItem({
   );
 }
 
-function SidebarContent({ pathname }: { pathname: string }) {
+function SidebarContent({
+  pathname,
+  onLogout,
+}: {
+  pathname: string;
+  onLogout: () => void;
+}) {
   const isDashboard = pathname === "/seller/dashboard";
   const isMedicines =
     pathname === "/seller/medicines" ||
@@ -104,23 +117,35 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
       {/* Bottom */}
       <div className="mt-auto">
-        <Separator className="my-3" />
-
         {/* Theme toggle */}
         <div className="mb-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Theme</span>
           <ModeToggle />
         </div>
 
+        <Separator className="my-3" />
+
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="btn-outline w-full"
+            onClick={() => void onLogout()}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
+        </div>
+
+        <Separator className="my-3" />
+
         <div className="flex flex-col gap-2">
           <Button asChild variant="outline" className="w-full btn-outline">
-            <Link href="/" scroll={false}>
-              Back to Store
-            </Link>
+            <Link href="/">Back to Store</Link>
           </Button>
 
           <Button asChild variant="outline" className="w-full btn-outline">
-            <Link href="/seller/profile" scroll={false}>
+            <Link href="/account/profile" prefetch={false}>
               My Profile
             </Link>
           </Button>
@@ -132,15 +157,35 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname() || "/seller/dashboard";
-  const { loading, user } = useSession();
+  const pathname = usePathname() || "/";
+
+  const { loading, user, refresh } = useSession();
+
+  const isSellerArea =
+    pathname === "/seller" || pathname.startsWith("/seller/");
+
+  const logout = async () => {
+    try {
+      await authClient.signOut();
+    } finally {
+      await refresh().catch(() => {});
+      router.replace("/login");
+    }
+  };
 
   React.useEffect(() => {
     if (loading) return;
+
     if (!user) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      return;
     }
-  }, [loading, user, router, pathname]);
+
+    if (isSellerArea && user.role !== "SELLER") {
+      router.replace("/shop");
+      return;
+    }
+  }, [loading, user, router, pathname, isSellerArea]);
 
   if (loading) {
     return (
@@ -154,16 +199,13 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
   if (!user) return null;
 
-  if (user.role !== "SELLER") {
-    router.replace("/shop");
-    return null;
-  }
+  if (isSellerArea && user.role !== "SELLER") return null;
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden w-72 shrink-0 border-r bg-card/60 backdrop-blur lg:block">
-        <SidebarContent pathname={pathname} />
+        <SidebarContent pathname={pathname} onLogout={logout} />
       </aside>
 
       {/* Main area */}
@@ -184,6 +226,27 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             <span className="text-sm font-semibold tracking-tight">
               Seller Panel
             </span>
+
+            <div className="ml-2 flex items-center gap-2">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="btn-outline"
+              >
+                <Link href="/">View site</Link>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="btn-outline"
+                onClick={() => void logout()}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           </div>
 
           <Sheet>
@@ -209,7 +272,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
               </SheetHeader>
 
               <div className="h-[calc(100dvh-64px)]">
-                <SidebarContent pathname={pathname} />
+                <SidebarContent pathname={pathname} onLogout={logout} />
               </div>
             </SheetContent>
           </Sheet>
