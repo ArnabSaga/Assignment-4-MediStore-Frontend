@@ -102,6 +102,9 @@ export default function AdminUsersPage() {
     "ALL"
   );
 
+  const pageSize = 6;
+  const [page, setPage] = React.useState(1);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -110,7 +113,11 @@ export default function AdminUsersPage() {
     try {
       const res = await getJSON<ApiResponse<UserRow[]>>(`/api/v1/admin/users`);
       if (!res.success) throw new Error(res.message || "Failed to load users");
-      setUsers(res.data ?? []);
+      const list = res.data ?? [];
+      setUsers(list);
+
+      const maxPage = Math.max(1, Math.ceil(list.length / pageSize));
+      setPage((p) => Math.min(p, maxPage));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load users");
     } finally {
@@ -139,6 +146,20 @@ export default function AdminUsersPage() {
       })
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }, [users, q, roleFilter, banFilter]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [q, roleFilter, banFilter]);
+
+  const total = filtered.length;
+  const maxPage = Math.max(1, Math.ceil(total / pageSize));
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const pageItems = filtered.slice(start, end);
+
+  React.useEffect(() => {
+    setPage((p) => Math.min(Math.max(1, p), maxPage));
+  }, [maxPage]);
 
   const setRow = (updated: UserRow) => {
     setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
@@ -313,14 +334,14 @@ export default function AdminUsersPage() {
                   Loading users…
                 </TableCell>
               </TableRow>
-            ) : filtered.length === 0 ? (
+            ) : pageItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="py-10 text-center">
                   No users found.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((u) => {
+              pageItems.map((u) => {
                 const busy = busyId === u.id;
 
                 return (
@@ -398,6 +419,31 @@ export default function AdminUsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      {!loading && total > 0 ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {maxPage} • Total {total}
+          </p>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              Prev
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
+              disabled={page >= maxPage}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

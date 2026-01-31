@@ -38,7 +38,6 @@ const API = {
   remove: (id: string) => `/api/v1/categories/${id}`,
 } as const;
 
-//*fetch helpers
 async function readJSON<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     method: "GET",
@@ -97,7 +96,6 @@ async function delJSON<T>(url: string): Promise<T> {
   return json as T;
 }
 
-//* Page
 export default function AdminCategoriesPage() {
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -108,14 +106,15 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [q, setQ] = React.useState("");
 
-  //* Create form
   const [newName, setNewName] = React.useState("");
   const [newDescription, setNewDescription] = React.useState("");
 
-  //* Edit state
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState("");
   const [editDescription, setEditDescription] = React.useState("");
+
+  const pageSize = 3;
+  const [page, setPage] = React.useState(1);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -128,7 +127,12 @@ export default function AdminCategoriesPage() {
       if (!res.success)
         throw new Error(res.message || "Failed to load categories");
 
-      setCategories(res.data ?? []);
+      const list = res.data ?? [];
+      setCategories(list);
+
+      // keep page in range after reload
+      const maxPage = Math.max(1, Math.ceil(list.length / pageSize));
+      setPage((p) => Math.min(p, maxPage));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load categories");
     } finally {
@@ -152,6 +156,20 @@ export default function AdminCategoriesPage() {
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [categories, q]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [q]);
+
+  const total = filtered.length;
+  const maxPage = Math.max(1, Math.ceil(total / pageSize));
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const pageItems = filtered.slice(start, end);
+
+  React.useEffect(() => {
+    setPage((p) => Math.min(Math.max(1, p), maxPage));
+  }, [maxPage]);
 
   const startEdit = (c: Category) => {
     setEditingId(c.id);
@@ -357,14 +375,14 @@ export default function AdminCategoriesPage() {
                   Loading categories…
                 </TableCell>
               </TableRow>
-            ) : filtered.length === 0 ? (
+            ) : pageItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="py-10 text-center">
                   No categories found.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((c) => {
+              pageItems.map((c) => {
                 const busy = busyId === c.id;
                 const isEditing = editingId === c.id;
 
@@ -452,6 +470,31 @@ export default function AdminCategoriesPage() {
           </TableBody>
         </Table>
       </div>
+
+      {!loading && total > 0 ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {maxPage} • Total {total}
+          </p>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              Prev
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
+              disabled={page >= maxPage}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <Separator />
     </main>
