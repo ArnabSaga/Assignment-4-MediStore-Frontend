@@ -43,13 +43,19 @@ type Order = {
 type Category = { id: string; name: string; slug: string };
 type Medicine = { id: string; name: string; price: number; createdAt: string };
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+const API = {
+  adminUsers: "/api/v1/admin/users",
+  adminOrders: "/api/v1/admin/orders?limit=1000&page=1",
+  categories: "/api/v1/categories",
+  medicines: "/api/v1/medicines?limit=1000&page=1",
+} as const;
 
 async function getJSON<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -103,14 +109,10 @@ export default function AdminDashboardPage() {
     try {
       const [usersRes, ordersRes, categoriesRes, medicinesRes] =
         await Promise.all([
-          getJSON<ApiResponse<User[]>>(`${BACKEND_URL}/api/v1/admin/users`),
-          getJSON<ApiListResponse<Order[]>>(
-            `${BACKEND_URL}/api/v1/admin/orders?limit=1000&page=1`
-          ),
-          getJSON<ApiResponse<Category[]>>(`${BACKEND_URL}/api/v1/categories`),
-          getJSON<ApiListResponse<Medicine[]>>(
-            `${BACKEND_URL}/api/v1/medicines?limit=1000&page=1`
-          ),
+          getJSON<ApiResponse<User[]>>(API.adminUsers),
+          getJSON<ApiListResponse<Order[]>>(API.adminOrders),
+          getJSON<ApiResponse<Category[]>>(API.categories),
+          getJSON<ApiListResponse<Medicine[]>>(API.medicines),
         ]);
 
       if (!usersRes.success)

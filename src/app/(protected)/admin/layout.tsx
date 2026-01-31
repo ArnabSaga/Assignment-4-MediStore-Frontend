@@ -18,39 +18,9 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/layout/ModeToggle";
+import { useSession } from "@/hooks/use-session";
 
 type Role = "CUSTOMER" | "SELLER" | "ADMIN";
-
-type SessionUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  image?: string | null;
-  isBanned?: boolean;
-};
-
-type BetterAuthSessionResult =
-  | { data: { user: any; session: any } | null; error: null }
-  | { data: null; error: { message?: string } };
-
-async function getUserFromSession(): Promise<SessionUser | null> {
-  const res =
-    (await authClient.getSession()) as unknown as BetterAuthSessionResult;
-
-  if (res?.error) return null;
-  if (!res?.data?.user) return null;
-
-  const u = res.data.user;
-  return {
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    role: (u.role ?? "CUSTOMER") as Role,
-    image: u.image ?? null,
-    isBanned: !!u.isBanned,
-  };
-}
 
 function NavLink({
   href,
@@ -87,49 +57,35 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
 
-  const [loading, setLoading] = React.useState(true);
-  const [allowed, setAllowed] = React.useState(false);
-  const [user, setUser] = React.useState<SessionUser | null>(null);
+  const { loading, user, refresh } = useSession();
+
+  const role = (user?.role ?? null) as Role | null;
+  const isBanned = !!(user as any)?.isBanned;
 
   React.useEffect(() => {
-    let mounted = true;
+    if (loading) return;
 
-    (async () => {
-      const u = await getUserFromSession();
-      if (!mounted) return;
-
-      if (!u) {
-        router.replace("/login");
-        return;
-      }
-
-      if (u.isBanned) {
-        router.replace("/");
-        return;
-      }
-
-      if (u.role !== "ADMIN") {
-        router.replace("/");
-        return;
-      }
-
-      setUser(u);
-      setAllowed(true);
-      setLoading(false);
-    })().catch(() => {
-      if (!mounted) return;
+    if (!user) {
       router.replace("/login");
-    });
+      return;
+    }
 
-    return () => {
-      mounted = false;
-    };
-  }, [router]);
+    if (isBanned) {
+      router.replace("/");
+      return;
+    }
+
+    if (role !== "ADMIN") {
+      router.replace("/");
+      return;
+    }
+  }, [loading, user, role, isBanned, router]);
 
   const logout = async () => {
     try {
       await authClient.signOut();
     } finally {
+      await refresh().catch(() => {});
       router.replace("/login");
     }
   };
@@ -144,7 +100,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!allowed) return null;
+  if (!user || isBanned || role !== "ADMIN") return null;
 
   return (
     <div className="h-[calc(100vh-56px)] w-full overflow-hidden">
@@ -226,7 +182,7 @@ export default function AdminLayout({
           </div>
         </aside>
 
-        {/* ✅ Main content fills ALL remaining width */}
+        {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Topbar */}
           <header className="sticky top-0 z-20 w-full border-b bg-background/80 backdrop-blur">
@@ -248,7 +204,6 @@ export default function AdminLayout({
             </div>
           </header>
 
-          {/* ✅ children covers the rest */}
           <main className="flex-1 min-w-0 w-full overflow-y-auto p-4 md:p-6">
             {children}
           </main>

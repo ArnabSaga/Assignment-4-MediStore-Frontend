@@ -39,20 +39,17 @@ type ApiResponse<T> = {
   data?: T;
 };
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
-
 async function getJSON<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
-
-  if (!res.ok) {
+  if (!res.ok)
     throw new Error(json?.message || `Request failed (${res.status})`);
-  }
   return json as T;
 }
 
@@ -62,13 +59,12 @@ async function patchJSON<T>(url: string, body: unknown): Promise<T> {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
-
-  if (!res.ok) {
+  if (!res.ok)
     throw new Error(json?.message || `Request failed (${res.status})`);
-  }
   return json as T;
 }
 
@@ -77,13 +73,12 @@ async function delJSON<T>(url: string): Promise<T> {
     method: "DELETE",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
-
-  if (!res.ok) {
+  if (!res.ok)
     throw new Error(json?.message || `Request failed (${res.status})`);
-  }
   return json as T;
 }
 
@@ -113,12 +108,8 @@ export default function AdminUsersPage() {
     setSuccess(null);
 
     try {
-      const res = await getJSON<ApiResponse<UserRow[]>>(
-        `${BACKEND_URL}/api/v1/admin/users`
-      );
-
+      const res = await getJSON<ApiResponse<UserRow[]>>(`/api/v1/admin/users`);
       if (!res.success) throw new Error(res.message || "Failed to load users");
-
       setUsers(res.data ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load users");
@@ -160,7 +151,7 @@ export default function AdminUsersPage() {
 
     try {
       const res = await patchJSON<ApiResponse<UserRow>>(
-        `${BACKEND_URL}/api/v1/admin/users/${u.id}/status`,
+        `/api/v1/admin/users/${u.id}/status`,
         { isBanned: !u.isBanned }
       );
 
@@ -190,7 +181,7 @@ export default function AdminUsersPage() {
 
     try {
       const res = await patchJSON<ApiResponse<UserRow>>(
-        `${BACKEND_URL}/api/v1/admin/users/${u.id}/role`,
+        `/api/v1/admin/users/${u.id}/role`,
         { role }
       );
 
@@ -219,9 +210,8 @@ export default function AdminUsersPage() {
 
     try {
       const res = await delJSON<ApiResponse<null>>(
-        `${BACKEND_URL}/api/v1/admin/users/${u.id}`
+        `/api/v1/admin/users/${u.id}`
       );
-
       if (!res.success) throw new Error(res.message || "Failed to delete user");
 
       setUsers((prev) => prev.filter((x) => x.id !== u.id));
@@ -365,13 +355,7 @@ export default function AdminUsersPage() {
                     </TableCell>
 
                     <TableCell>
-                      <span
-                        className={
-                          u.isBanned
-                            ? "rounded-md border px-2 py-1 text-xs"
-                            : "rounded-md border px-2 py-1 text-xs"
-                        }
-                      >
+                      <span className="rounded-md border px-2 py-1 text-xs">
                         {u.isBanned ? "BANNED" : "ACTIVE"}
                       </span>
                     </TableCell>

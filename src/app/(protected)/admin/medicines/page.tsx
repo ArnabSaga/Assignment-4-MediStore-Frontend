@@ -47,7 +47,7 @@ type Medicine = {
   imageUrl?: string | null;
   isActive: boolean;
   manufacturer: string;
-  price: number; 
+  price: number;
   stock: number;
   createdAt: string;
   updatedAt: string;
@@ -62,7 +62,11 @@ type ApiResponse<T> = {
   meta?: any;
 };
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+const API = {
+  categories: "/api/v1/categories",
+  medicines: (qs: string) => `/api/v1/medicines?${qs}`,
+  adminMedicine: (id: string) => `/api/v1/admin/medicines/${id}`, 
+} as const;
 
 function toNumber(v: unknown, fallback = 0) {
   if (typeof v === "number" && !Number.isNaN(v)) return v;
@@ -96,6 +100,7 @@ async function readJSON<T>(url: string): Promise<T> {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -110,6 +115,7 @@ async function putJSON<T>(url: string, body: unknown): Promise<T> {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -123,6 +129,7 @@ async function delJSON<T>(url: string): Promise<T> {
     method: "DELETE",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -159,13 +166,13 @@ export default function AdminMedicinesPage() {
   const [medicines, setMedicines] = React.useState<Medicine[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
 
-  // Filters
+  //* Filters
   const [search, setSearch] = React.useState("");
   const [categoryId, setCategoryId] = React.useState<string>("ALL");
   const [page, setPage] = React.useState(1);
   const [limit] = React.useState(20);
 
-  // Edit dialog state
+  //* Edit dialog state
   const [open, setOpen] = React.useState(false);
   const [current, setCurrent] = React.useState<Medicine | null>(null);
 
@@ -173,7 +180,7 @@ export default function AdminMedicinesPage() {
   const [eManufacturer, setEManufacturer] = React.useState("");
   const [ePrice, setEPrice] = React.useState("");
   const [eStock, setEStock] = React.useState("");
-  const [eCategoryId, setECategoryId] = React.useState<string>(""); // required
+  const [eCategoryId, setECategoryId] = React.useState<string>("");
   const [eIsActive, setEIsActive] = React.useState<"true" | "false">("true");
   const [eImageUrl, setEImageUrl] = React.useState("");
   const [eDescription, setEDescription] = React.useState("");
@@ -184,15 +191,13 @@ export default function AdminMedicinesPage() {
     setSuccess(null);
 
     try {
-      // categories
-      const catRes = await readJSON<ApiResponse<Category[]>>(
-        `${BACKEND_URL}/api/v1/categories`
-      );
+      //* categories
+      const catRes = await readJSON<ApiResponse<Category[]>>(API.categories);
       if (!catRes.success)
         throw new Error(catRes.message || "Failed to load categories");
       setCategories(catRes.data ?? []);
 
-      // medicines list (public)
+      //* medicines list (public)
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("limit", String(limit));
@@ -200,7 +205,7 @@ export default function AdminMedicinesPage() {
       if (categoryId !== "ALL") params.set("categoryId", categoryId);
 
       const medRes = await readJSON<ApiResponse<any[]>>(
-        `${BACKEND_URL}/api/v1/medicines?${params.toString()}`
+        API.medicines(params.toString())
       );
       if (!medRes.success)
         throw new Error(medRes.message || "Failed to load medicines");
@@ -220,10 +225,8 @@ export default function AdminMedicinesPage() {
     void load();
   }, [load]);
 
-  // reset page when filters change
   React.useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, categoryId]);
 
   const openEdit = (m: Medicine) => {
@@ -260,7 +263,6 @@ export default function AdminMedicinesPage() {
     setSuccess(null);
 
     try {
-      // Build payload only with changes (backend rejects empty update)
       const payload: any = {};
 
       const name = eName.trim();
@@ -287,24 +289,21 @@ export default function AdminMedicinesPage() {
       if (eCategoryId && eCategoryId !== currCatId)
         payload.categoryId = eCategoryId;
 
-      // allow setting empty string -> null
       if ((imageUrl || "") !== (current.imageUrl ?? ""))
         payload.imageUrl = imageUrl ? imageUrl : null;
       if ((description || "") !== (current.description ?? ""))
         payload.description = description ? description : null;
 
-      const keys = Object.keys(payload);
-      if (keys.length === 0) {
+      if (Object.keys(payload).length === 0) {
         setSuccess("Nothing to update.");
         setBusyId(null);
         return;
       }
 
       const res = await putJSON<ApiResponse<any>>(
-        `${BACKEND_URL}/api/v1/admin/medicines/${current.id}`,
+        API.adminMedicine(current.id),
         payload
       );
-
       if (!res.success || !res.data)
         throw new Error(res.message || "Failed to update medicine");
 
@@ -330,10 +329,7 @@ export default function AdminMedicinesPage() {
     setSuccess(null);
 
     try {
-      const res = await delJSON<ApiResponse<null>>(
-        `${BACKEND_URL}/api/v1/admin/medicines/${m.id}`
-      );
-
+      const res = await delJSON<ApiResponse<null>>(API.adminMedicine(m.id));
       if (!res.success)
         throw new Error(res.message || "Failed to delete medicine");
 
@@ -515,6 +511,7 @@ export default function AdminMedicinesPage() {
       </div>
 
       <Separator />
+
       {/* Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">

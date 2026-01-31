@@ -31,15 +31,20 @@ type ApiResponse<T> = {
   meta?: any;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+const API = {
+  list: "/api/v1/categories",
+  create: "/api/v1/categories",
+  update: (id: string) => `/api/v1/categories/${id}`,
+  remove: (id: string) => `/api/v1/categories/${id}`,
+} as const;
 
-/* ----------------------------- fetch helpers ----------------------------- */
-
+//*fetch helpers
 async function readJSON<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -54,6 +59,7 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -64,10 +70,11 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
 
 async function putJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
-    method: "PUT", // ✅ backend uses PUT for update
+    method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -81,6 +88,7 @@ async function delJSON<T>(url: string): Promise<T> {
     method: "DELETE",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
   });
 
   const json = (await res.json().catch(() => null)) as any;
@@ -89,8 +97,7 @@ async function delJSON<T>(url: string): Promise<T> {
   return json as T;
 }
 
-/* --------------------------------- page --------------------------------- */
-
+//* Page
 export default function AdminCategoriesPage() {
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -101,11 +108,11 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [q, setQ] = React.useState("");
 
-  // Create form
+  //* Create form
   const [newName, setNewName] = React.useState("");
   const [newDescription, setNewDescription] = React.useState("");
 
-  // Edit state
+  //* Edit state
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState("");
   const [editDescription, setEditDescription] = React.useState("");
@@ -116,9 +123,7 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await readJSON<ApiResponse<Category[]>>(
-        `${API_BASE}/api/v1/categories`
-      );
+      const res = await readJSON<ApiResponse<Category[]>>(API.list);
 
       if (!res.success)
         throw new Error(res.message || "Failed to load categories");
@@ -173,20 +178,15 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await postJSON<ApiResponse<Category>>(
-        `${API_BASE}/api/v1/categories`,
-        {
-          name,
-          // backend may ignore description if not supported; safe to send
-          description: description ? description : undefined,
-        }
-      );
+      const res = await postJSON<ApiResponse<Category>>(API.create, {
+        name,
+        description: description ? description : undefined,
+      });
 
       if (!res.success || !res.data) {
         throw new Error(res.message || "Failed to create category");
       }
 
-      // add newest on top (or you can reload)
       setCategories((prev) => [res.data!, ...prev]);
       setNewName("");
       setNewDescription("");
@@ -209,13 +209,10 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await putJSON<ApiResponse<Category>>(
-        `${API_BASE}/api/v1/categories/${id}`,
-        {
-          name,
-          description: description ? description : null,
-        }
-      );
+      const res = await putJSON<ApiResponse<Category>>(API.update(id), {
+        name,
+        description: description ? description : null,
+      });
 
       if (!res.success || !res.data) {
         throw new Error(res.message || "Failed to update category");
@@ -243,9 +240,7 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await delJSON<ApiResponse<null>>(
-        `${API_BASE}/api/v1/categories/${c.id}`
-      );
+      const res = await delJSON<ApiResponse<null>>(API.remove(c.id));
 
       if (!res.success)
         throw new Error(res.message || "Failed to delete category");

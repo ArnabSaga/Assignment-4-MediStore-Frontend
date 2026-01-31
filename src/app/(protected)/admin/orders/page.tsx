@@ -49,8 +49,6 @@ type ApiListResponse<T> = {
   data?: T;
 };
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
-
 function formatBDT(amount: number) {
   try {
     return new Intl.NumberFormat("en-BD", {
@@ -90,14 +88,12 @@ async function fetchAdminOrders(opts: {
   if (opts.q?.trim()) params.set("q", opts.q.trim());
   if (opts.status && opts.status !== "ALL") params.set("status", opts.status);
 
-  const res = await fetch(
-    `${BACKEND_URL}/api/v1/admin/orders?${params.toString()}`,
-    {
-      method: "GET",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-    }
-  );
+  const res = await fetch(`/api/v1/admin/orders?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
 
   const json = (await res.json().catch(() => null)) as ApiListResponse<
     OrderListItem[]
@@ -146,10 +142,8 @@ export default function AdminOrdersPage() {
     void load();
   }, [load]);
 
-  // reset to first page when filters change
   React.useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, status]);
 
   const maxPage = Math.max(1, Math.ceil(total / limit));
@@ -276,7 +270,6 @@ export default function AdminOrdersPage() {
         </Table>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Page {page} of {maxPage} • Total {total}
