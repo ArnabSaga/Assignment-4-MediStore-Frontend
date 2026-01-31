@@ -19,8 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
-
 type Category = { id: string; name: string; slug: string };
 
 const schema = z.object({
@@ -33,17 +31,6 @@ const schema = z.object({
   description: z.string().optional().or(z.literal("")),
   isActive: z.boolean().optional(),
 });
-
-type FormValues = {
-  name: string;
-  manufacturer: string;
-  categoryId: string;
-  price: number;
-  stock: number;
-  imageUrl: string;
-  description: string;
-  isActive: boolean;
-};
 
 export function CreateMedicineForm({ categories }: { categories: Category[] }) {
   const router = useRouter();
@@ -89,10 +76,10 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
           isActive: Boolean(parsed.data.isActive ?? true),
         };
 
-        const res = await fetch(`${BACKEND_URL}/api/v1/seller/medicines`, {
+        const res = await fetch(`/api/v1/seller/medicines`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include", // send cookies to backend (5000)
+          credentials: "include",
           body: JSON.stringify(payload),
         });
 

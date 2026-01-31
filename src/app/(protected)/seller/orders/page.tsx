@@ -48,8 +48,6 @@ type ApiListResponse<T> = {
   data?: T;
 };
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
-
 function formatBDT(amount: number) {
   try {
     return new Intl.NumberFormat("en-BD", {
@@ -78,14 +76,12 @@ const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
 ];
 
 async function fetchSellerOrders(): Promise<SellerOrderListItem[]> {
-  const res = await fetch(
-    `${BACKEND_URL}/api/v1/seller/orders?limit=100&page=1`,
-    {
-      method: "GET",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-    }
-  );
+  const res = await fetch(`/api/v1/seller/orders?limit=200&page=1`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
 
   const json = (await res.json().catch(() => null)) as ApiListResponse<
     SellerOrderListItem[]
@@ -111,12 +107,18 @@ export default function SellerOrdersPage() {
   const [q, setQ] = React.useState("");
   const [status, setStatus] = React.useState<OrderStatus | "ALL">("ALL");
 
+  const [page, setPage] = React.useState(1);
+  const pageSize = 5;
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const list = await fetchSellerOrders();
       setOrders(list);
+
+      const maxPage = Math.max(1, Math.ceil(list.length / pageSize));
+      setPage((p) => Math.min(p, maxPage));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load orders");
     } finally {
@@ -130,6 +132,7 @@ export default function SellerOrdersPage() {
 
   const filtered = React.useMemo(() => {
     const query = q.trim().toLowerCase();
+
     return orders
       .filter((o) => (status === "ALL" ? true : o.status === status))
       .filter((o) => {
@@ -146,6 +149,16 @@ export default function SellerOrdersPage() {
       })
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }, [orders, q, status]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [q, status]);
+
+  const total = filtered.length;
+  const maxPage = Math.max(1, Math.ceil(total / pageSize));
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const pageItems = filtered.slice(start, end);
 
   return (
     <main className="space-y-6 p-4 md:p-6">
@@ -216,14 +229,14 @@ export default function SellerOrdersPage() {
                   Loading orders…
                 </TableCell>
               </TableRow>
-            ) : filtered.length === 0 ? (
+            ) : pageItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="py-10 text-center">
                   No orders found.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((o) => (
+              pageItems.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
@@ -270,6 +283,31 @@ export default function SellerOrdersPage() {
           </TableBody>
         </Table>
       </div>
+
+      {!loading && total > pageSize ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {maxPage} • Total {total}
+          </p>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              Prev
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
+              disabled={page >= maxPage}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -68,10 +68,10 @@ function toNumber(v: number | string) {
 }
 
 function money(n: number) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-BD", {
     style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
+    currency: "BDT",
+    maximumFractionDigits: 0,
   }).format(n);
 }
 
@@ -114,15 +114,20 @@ async function backendFetch<T>(path: string): Promise<T> {
       "Content-Type": "application/json",
       Cookie: cookieHeader,
     },
-    cache: "no-store",
+    next: { revalidate: 0 },
   });
 
+  const text = await res.text().catch(() => "");
+
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
     throw new Error(`Backend fetch failed: ${res.status} ${text}`);
   }
 
-  return res.json();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error("Backend returned invalid JSON");
+  }
 }
 
 export default async function SellerDashboardPage() {
@@ -183,9 +188,7 @@ export default async function SellerDashboardPage() {
   const pendingOrders = orders.filter(
     (o) => o.status === "PLACED" || o.status === "PROCESSING"
   ).length;
-  const deliveredOrders = orders.filter((o) => o.status === "DELIVERED").length;
 
-  //* revenue this month (seller revenue only)
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const revenueThisMonth = orders

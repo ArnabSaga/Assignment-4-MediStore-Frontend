@@ -6,8 +6,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
-
 export function DeleteMedicineButton({
   id,
   name,
@@ -20,6 +18,7 @@ export function DeleteMedicineButton({
 
   const onDelete = async () => {
     if (pending) return;
+
     const ok = window.confirm(`Delete "${name}"? This cannot be undone.`);
     if (!ok) return;
 
@@ -27,21 +26,33 @@ export function DeleteMedicineButton({
     const t = toast.loading("Deleting...");
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/seller/medicines/${id}`, {
+      const res = await fetch(`/api/v1/seller/medicines/${id}`, {
         method: "DELETE",
-        credentials: "include", // ✅ send cookies
+        credentials: "include",
       });
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
-        toast.error(`Delete failed`, { id: t });
-        console.log(txt);
+        console.log("DELETE FAILED:", res.status, txt);
+        toast.error("Delete failed", { id: t });
+        return;
+      }
+
+      // backend may or may not return json
+      const json = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        message?: string;
+      } | null;
+
+      if (json && json.success === false) {
+        toast.error(json.message || "Delete failed", { id: t });
         return;
       }
 
       toast.success("Deleted successfully", { id: t });
       router.refresh();
-    } catch {
+    } catch (e) {
+      console.log(e);
       toast.error("Something went wrong", { id: t });
     } finally {
       setPending(false);

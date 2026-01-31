@@ -38,6 +38,5 @@ async function fetchCategories(): Promise<Category[]> {
 
 export default async function NewMedicinePage() {
   const categories = await fetchCategories();
-
   return <CreateMedicineForm categories={categories} />;
 }

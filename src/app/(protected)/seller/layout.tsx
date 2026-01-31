@@ -137,14 +137,8 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     if (loading) return;
-
     if (!user) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-      return;
-    }
-
-    if (user.role !== "SELLER" && user.role !== "ADMIN") {
-      router.replace("/account");
     }
   }, [loading, user, router, pathname]);
 
@@ -158,8 +152,12 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // while redirecting
-  if (!user || (user.role !== "SELLER" && user.role !== "ADMIN")) return null;
+  if (!user) return null;
+
+  if (user.role !== "SELLER") {
+    router.replace("/shop");
+    return null;
+  }
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
@@ -210,7 +208,6 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
                 </SheetTitle>
               </SheetHeader>
 
-              {/* full height inside sheet */}
               <div className="h-[calc(100dvh-64px)]">
                 <SidebarContent pathname={pathname} />
               </div>
@@ -218,7 +215,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
           </Sheet>
         </div>
 
-        {/* ✅ Only main scrolls */}
+        {/* Only main scrolls */}
         <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="min-h-full rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
             {children}

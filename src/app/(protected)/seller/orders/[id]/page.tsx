@@ -29,6 +29,31 @@ type OrderStatus =
   | "DELIVERED"
   | "CANCELLED";
 
+type SellerOrderItemApi = {
+  id: string;
+  quantity: number;
+  price: number | string;
+  createdAt: string;
+  medicine?: {
+    id: string;
+    name: string;
+    image?: string | null;
+  } | null;
+  order: {
+    id: string;
+    status: OrderStatus;
+    totalAmount: number | string;
+    createdAt: string;
+    updatedAt: string;
+    customer?: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
+  };
+};
+
 type OrderItem = {
   id: string;
   quantity: number;
@@ -64,11 +89,15 @@ type ApiResponse<T> = {
 type ApiListResponse<T> = {
   success: boolean;
   message?: string;
-  meta?: { page?: number; limit?: number };
+  meta?: { page?: number; limit?: number; total?: number };
   data?: T;
 };
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+function toNumber(v: number | string | null | undefined) {
+  if (typeof v === "number") return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
 
 function formatBDT(amount: number) {
   try {
@@ -96,18 +125,21 @@ const STATUS_OPTIONS: OrderStatus[] = [
   "CANCELLED",
 ];
 
-async function fetchSellerOrderById(id: string): Promise<SellerOrderDetails> {
+async function fetchSellerOrderById(
+  orderId: string
+): Promise<SellerOrderDetails> {
   const res = await fetch(
-    `${BACKEND_URL}/api/v1/seller/orders?limit=200&page=1`,
+    `/api/v1/seller/orders?limit=200&page=1&sortBy=createdAt&sortOrder=desc`,
     {
       method: "GET",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
+      cache: "no-store",
     }
   );
 
   const json = (await res.json().catch(() => null)) as ApiListResponse<
-    SellerOrderDetails[]
+    SellerOrderItemApi[]
   > | null;
 
   if (!res.ok) {
@@ -117,24 +149,59 @@ async function fetchSellerOrderById(id: string): Promise<SellerOrderDetails> {
     throw new Error(json?.message || "Failed to load orders");
   }
 
-  const list = Array.isArray(json.data) ? json.data : [];
-  const found = list.find((o) => o.id === id);
+  const items = Array.isArray(json.data) ? json.data : [];
+  const orderItems = items.filter((it) => it.order?.id === orderId);
 
-  if (!found) throw new Error("Order not found for this seller.");
-  return found;
+  if (orderItems.length === 0) {
+    throw new Error("Order not found for this seller.");
+  }
+
+  const o = orderItems[0].order;
+
+  return {
+    id: o.id,
+    status: o.status,
+    totalAmount: toNumber(o.totalAmount),
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
+    customer: o.customer ?? null,
+    items: orderItems.map((it) => ({
+      id: it.id,
+      quantity: it.quantity ?? 0,
+      price: toNumber(it.price),
+      medicine: it.medicine
+        ? {
+            id: it.medicine.id,
+            name: it.medicine.name,
+            image: it.medicine.image ?? null,
+          }
+        : null,
+    })),
+  };
 }
 
 async function updateOrderStatus(id: string, status: OrderStatus) {
-  const res = await fetch(`${BACKEND_URL}/api/v1/seller/orders/${id}`, {
+  const res = await fetch(`/api/v1/seller/orders/${id}`, {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
+    cache: "no-store",
   });
 
-  const json = (await res
-    .json()
-    .catch(() => null)) as ApiResponse<SellerOrderDetails> | null;
+  const json = (await res.json().catch(() => null)) as ApiResponse<{
+    id: string;
+    status: OrderStatus;
+    totalAmount: number | string;
+    createdAt: string;
+    updatedAt: string;
+    customer?: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
+  }> | null;
 
   if (!res.ok) {
     throw new Error(json?.message || `Failed to update status (${res.status})`);
@@ -161,6 +228,7 @@ export default function SellerOrderDetailsPage() {
     if (!id) return;
     setLoading(true);
     setError(null);
+
     try {
       const data = await fetchSellerOrderById(id);
       setOrder(data);
@@ -187,9 +255,21 @@ export default function SellerOrderDetailsPage() {
 
     setSaving(true);
     setError(null);
+
     try {
       const updated = await updateOrderStatus(order.id, status);
-      setOrder(updated);
+
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: updated.status,
+              updatedAt: updated.updatedAt,
+              totalAmount: toNumber(updated.totalAmount),
+              customer: updated.customer ?? prev.customer,
+            }
+          : prev
+      );
       setStatus(updated.status);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update status");
@@ -204,7 +284,7 @@ export default function SellerOrderDetailsPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href="/seller/order">Back</Link>
+              <Link href="/seller/orders">Back</Link>
             </Button>
             <h1 className="text-xl font-semibold">Order Details</h1>
           </div>
