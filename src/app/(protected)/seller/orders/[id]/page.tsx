@@ -93,10 +93,13 @@ type ApiListResponse<T> = {
   data?: T;
 };
 
-function toNumber(v: number | string | null | undefined) {
-  if (typeof v === "number") return v;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
+function toNumber(v: unknown) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
 }
 
 function formatBDT(amount: number) {
@@ -111,12 +114,6 @@ function formatBDT(amount: number) {
   }
 }
 
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString();
-}
-
 const STATUS_OPTIONS: OrderStatus[] = [
   "PLACED",
   "PROCESSING",
@@ -126,7 +123,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
 ];
 
 async function fetchSellerOrderById(
-  orderId: string
+  inputId: string
 ): Promise<SellerOrderDetails> {
   const res = await fetch(
     `/api/v1/seller/orders?limit=200&page=1&sortBy=createdAt&sortOrder=desc`,
@@ -149,8 +146,18 @@ async function fetchSellerOrderById(
     throw new Error(json?.message || "Failed to load orders");
   }
 
-  const items = Array.isArray(json.data) ? json.data : [];
-  const orderItems = items.filter((it) => it.order?.id === orderId);
+  const list = Array.isArray(json.data) ? json.data : [];
+
+  let orderId = inputId;
+  let orderItems = list.filter((it) => it.order?.id === orderId);
+
+  if (orderItems.length === 0) {
+    const foundItem = list.find((it) => it.id === inputId);
+    if (foundItem?.order?.id) {
+      orderId = foundItem.order.id;
+      orderItems = list.filter((it) => it.order?.id === orderId);
+    }
+  }
 
   if (orderItems.length === 0) {
     throw new Error("Order not found for this seller.");
@@ -158,25 +165,32 @@ async function fetchSellerOrderById(
 
   const o = orderItems[0].order;
 
+  const mappedItems: OrderItem[] = orderItems.map((it) => ({
+    id: it.id,
+    quantity: toNumber(it.quantity),
+    price: toNumber(it.price),
+    medicine: it.medicine
+      ? {
+          id: it.medicine.id,
+          name: it.medicine.name,
+          image: it.medicine.image ?? null,
+        }
+      : null,
+  }));
+
+  const subtotal = mappedItems.reduce(
+    (sum, it) => sum + it.price * it.quantity,
+    0
+  );
+
   return {
-    id: o.id,
+    id: orderId,
     status: o.status,
-    totalAmount: toNumber(o.totalAmount),
+    totalAmount: subtotal,
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
     customer: o.customer ?? null,
-    items: orderItems.map((it) => ({
-      id: it.id,
-      quantity: it.quantity ?? 0,
-      price: toNumber(it.price),
-      medicine: it.medicine
-        ? {
-            id: it.medicine.id,
-            name: it.medicine.name,
-            image: it.medicine.image ?? null,
-          }
-        : null,
-    })),
+    items: mappedItems,
   };
 }
 
@@ -189,19 +203,7 @@ async function updateOrderStatus(id: string, status: OrderStatus) {
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as ApiResponse<{
-    id: string;
-    status: OrderStatus;
-    totalAmount: number | string;
-    createdAt: string;
-    updatedAt: string;
-    customer?: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      phone?: string | null;
-    } | null;
-  }> | null;
+  const json = (await res.json().catch(() => null)) as ApiResponse<any> | null;
 
   if (!res.ok) {
     throw new Error(json?.message || `Failed to update status (${res.status})`);
@@ -210,7 +212,18 @@ async function updateOrderStatus(id: string, status: OrderStatus) {
     throw new Error(json?.message || "Failed to update status");
   }
 
-  return json.data;
+  return json.data as {
+    id: string;
+    status: OrderStatus;
+    updatedAt: string;
+    totalAmount: number | string;
+    customer?: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
+  };
 }
 
 export default function SellerOrderDetailsPage() {
@@ -258,14 +271,16 @@ export default function SellerOrderDetailsPage() {
 
     try {
       const updated = await updateOrderStatus(order.id, status);
-
       setOrder((prev) =>
         prev
           ? {
               ...prev,
               status: updated.status,
               updatedAt: updated.updatedAt,
-              totalAmount: toNumber(updated.totalAmount),
+              totalAmount: prev.items.reduce(
+                (sum, it) => sum + it.price * it.quantity,
+                0
+              ),
               customer: updated.customer ?? prev.customer,
             }
           : prev
@@ -289,7 +304,7 @@ export default function SellerOrderDetailsPage() {
             <h1 className="text-xl font-semibold">Order Details</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            {id ? `Order ID: ${id}` : ""}
+            {order?.id ? `Order ID: ${order.id}` : id ? `Order ID: ${id}` : ""}
           </p>
         </div>
 
@@ -314,7 +329,6 @@ export default function SellerOrderDetailsPage() {
         <div className="rounded-lg border p-6">Order not found.</div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Items */}
           <section className="lg:col-span-2 rounded-lg border">
             <div className="p-4">
               <h2 className="font-semibold">Items</h2>
@@ -368,30 +382,18 @@ export default function SellerOrderDetailsPage() {
             </div>
           </section>
 
-          {/* Summary + Status */}
           <aside className="rounded-lg border h-fit">
             <div className="p-4 space-y-3">
               <h2 className="font-semibold">Summary</h2>
 
-              <div className="text-sm space-y-1">
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Created</span>
-                  <span className="text-right">
-                    {formatDate(order.createdAt)}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Updated</span>
-                  <span className="text-right">
-                    {formatDate(order.updatedAt)}
-                  </span>
-                </div>
+              <div className="text-sm space-y-2">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Customer</span>
                   <span className="text-right">
                     {order.customer?.name ?? "Customer"}
                   </span>
                 </div>
+
                 {order.customer?.email ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Email</span>
@@ -399,7 +401,14 @@ export default function SellerOrderDetailsPage() {
                   </div>
                 ) : null}
 
-                <Separator className="my-2" />
+                {order.customer?.phone ? (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Phone</span>
+                    <span className="text-right">{order.customer.phone}</span>
+                  </div>
+                ) : null}
+
+                <Separator />
 
                 <div className="flex justify-between gap-3 text-base font-semibold">
                   <span>Total</span>

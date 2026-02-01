@@ -28,17 +28,29 @@ type OrderStatus =
   | "DELIVERED"
   | "CANCELLED";
 
-type SellerOrderListItem = {
+type SellerOrderItemApi = {
   id: string;
-  status: OrderStatus;
-  totalAmount: number;
+  quantity: number;
+  price: number | string;
   createdAt: string;
-  customer?: {
+  medicine?: {
     id: string;
-    name?: string | null;
-    email?: string | null;
+    name: string;
+    image?: string | null;
   } | null;
-  _count?: { items?: number };
+  order: {
+    id: string;
+    status: OrderStatus;
+    totalAmount: number | string;
+    createdAt: string;
+    updatedAt: string;
+    customer?: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
+  };
 };
 
 type ApiListResponse<T> = {
@@ -47,6 +59,15 @@ type ApiListResponse<T> = {
   meta?: { page?: number; limit?: number; total?: number };
   data?: T;
 };
+
+function toNumber(v: unknown) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
 
 function formatBDT(amount: number) {
   try {
@@ -75,7 +96,7 @@ const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
   { label: "Cancelled", value: "CANCELLED" },
 ];
 
-async function fetchSellerOrders(): Promise<SellerOrderListItem[]> {
+async function fetchSellerOrderItems(): Promise<SellerOrderItemApi[]> {
   const res = await fetch(`/api/v1/seller/orders?limit=200&page=1`, {
     method: "GET",
     credentials: "include",
@@ -84,7 +105,7 @@ async function fetchSellerOrders(): Promise<SellerOrderListItem[]> {
   });
 
   const json = (await res.json().catch(() => null)) as ApiListResponse<
-    SellerOrderListItem[]
+    SellerOrderItemApi[]
   > | null;
 
   if (!res.ok) {
@@ -99,23 +120,69 @@ async function fetchSellerOrders(): Promise<SellerOrderListItem[]> {
   return Array.isArray(json.data) ? json.data : [];
 }
 
+type SellerOrderRow = {
+  orderId: string;
+  status: OrderStatus;
+  createdAt: string;
+  customerName: string;
+  customerEmail: string;
+  itemsCount: number;
+  total: number;
+};
+
 export default function SellerOrdersPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [orders, setOrders] = React.useState<SellerOrderListItem[]>([]);
+  const [rows, setRows] = React.useState<SellerOrderRow[]>([]);
 
   const [q, setQ] = React.useState("");
   const [status, setStatus] = React.useState<OrderStatus | "ALL">("ALL");
 
   const [page, setPage] = React.useState(1);
-  const pageSize = 5;
+  const pageSize = 8;
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const list = await fetchSellerOrders();
-      setOrders(list);
+      const items = await fetchSellerOrderItems();
+
+      const map = new Map<string, SellerOrderRow>();
+
+      for (const it of items) {
+        const orderId = it.order?.id;
+        if (!orderId) continue;
+
+        const price = toNumber(it.price);
+        const qty = toNumber(it.quantity);
+        const line = price * qty;
+
+        const existing = map.get(orderId);
+
+        if (!existing) {
+          map.set(orderId, {
+            orderId,
+            status: it.order.status,
+            createdAt: it.order.createdAt,
+            customerName: it.order.customer?.name || "Customer",
+            customerEmail: it.order.customer?.email || "",
+            itemsCount: 1,
+            total: line,
+          });
+        } else {
+          existing.itemsCount += 1;
+          existing.total += line;
+          existing.status = it.order.status;
+          existing.createdAt = it.order.createdAt;
+        }
+      }
+
+      const list = Array.from(map.values()).sort((a, b) =>
+        a.createdAt < b.createdAt ? 1 : -1
+      );
+
+      setRows(list);
 
       const maxPage = Math.max(1, Math.ceil(list.length / pageSize));
       setPage((p) => Math.min(p, maxPage));
@@ -133,22 +200,16 @@ export default function SellerOrdersPage() {
   const filtered = React.useMemo(() => {
     const query = q.trim().toLowerCase();
 
-    return orders
+    return rows
       .filter((o) => (status === "ALL" ? true : o.status === status))
       .filter((o) => {
         if (!query) return true;
-        const hay = [
-          o.id,
-          o.customer?.name ?? "",
-          o.customer?.email ?? "",
-          o.status,
-        ]
+        const hay = [o.orderId, o.customerName, o.customerEmail, o.status]
           .join(" ")
           .toLowerCase();
         return hay.includes(query);
-      })
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  }, [orders, q, status]);
+      });
+  }, [rows, q, status]);
 
   React.useEffect(() => {
     setPage(1);
@@ -169,6 +230,7 @@ export default function SellerOrdersPage() {
             View and manage your customer orders.
           </p>
         </div>
+
         <Button
           variant="outline"
           onClick={() => void load()}
@@ -212,7 +274,7 @@ export default function SellerOrdersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-65">Order</TableHead>
+              <TableHead className="w-70">Order</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
@@ -237,10 +299,10 @@ export default function SellerOrdersPage() {
               </TableRow>
             ) : (
               pageItems.map((o) => (
-                <TableRow key={o.id}>
+                <TableRow key={o.orderId}>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
-                      <span className="truncate">{o.id}</span>
+                      <span className="truncate">{o.orderId}</span>
                       <span className="text-xs text-muted-foreground">
                         {o.status}
                       </span>
@@ -249,11 +311,9 @@ export default function SellerOrdersPage() {
 
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="truncate">
-                        {o.customer?.name || "Customer"}
-                      </span>
+                      <span className="truncate">{o.customerName}</span>
                       <span className="text-xs text-muted-foreground truncate">
-                        {o.customer?.email || ""}
+                        {o.customerEmail}
                       </span>
                     </div>
                   </TableCell>
@@ -261,20 +321,18 @@ export default function SellerOrdersPage() {
                   <TableCell>{o.status}</TableCell>
 
                   <TableCell className="text-right">
-                    {formatBDT(o.totalAmount)}
+                    {formatBDT(o.total)}
                   </TableCell>
 
-                  <TableCell className="text-right">
-                    {o._count?.items ?? "-"}
-                  </TableCell>
+                  <TableCell className="text-right">{o.itemsCount}</TableCell>
 
                   <TableCell className="text-right">
                     {formatDate(o.createdAt)}
                   </TableCell>
 
                   <TableCell className="text-right">
-                    <Button asChild size="sm">
-                      <Link href={`/seller/order/${o.id}`}>View</Link>
+                    <Button asChild size="sm" className="rounded-md">
+                      <Link href={`/seller/orders/${o.orderId}`}>View</Link>
                     </Button>
                   </TableCell>
                 </TableRow>
