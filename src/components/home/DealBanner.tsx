@@ -7,7 +7,7 @@ import { Countdown } from "@/components/home/Countdown";
 
 export function DealBanner() {
   const endsAtISO = new Date(
-    Date.now() + 70 * 24 * 60 * 60 * 1000
+    Date.now() + 7 * 24 * 60 * 60 * 1000
   ).toISOString();
 
   return (

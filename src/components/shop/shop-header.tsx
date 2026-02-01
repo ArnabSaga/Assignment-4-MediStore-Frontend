@@ -19,7 +19,6 @@ function buildQueryString(
     else sp.set(key, value);
   }
 
-  // optional: reset page when filters/search changes
   if ("q" in updates || "category" in updates || "sort" in updates) {
     sp.delete("page");
   }
@@ -37,12 +36,10 @@ export function ShopHeader({ className }: { className?: string }) {
 
   const [q, setQ] = React.useState(qFromUrl);
 
-  // keep input synced if user navigates with back/forward
   React.useEffect(() => {
     setQ(qFromUrl);
   }, [qFromUrl]);
 
-  // debounce URL updates
   React.useEffect(() => {
     const t = setTimeout(() => {
       const next = buildQueryString(searchParams, { q });
@@ -52,7 +49,6 @@ export function ShopHeader({ className }: { className?: string }) {
     }, 350);
 
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   return (

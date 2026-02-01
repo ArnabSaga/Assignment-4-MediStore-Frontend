@@ -2,65 +2,60 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { serverApi } from "@/lib/server-api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
-type Product = {
+import { PRODUCT_IMAGE_MAP } from "@/lib/product-images";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
+
+type Category = {
   id: string;
   name: string;
-  category: string;
-  price: number;
-  salePrice?: number;
-  image: string;
-  description: string;
+  slug: string;
 };
 
-// 🔁 Replace with real API later
-async function getProduct(id: string): Promise<Product | null> {
-  await new Promise((r) => setTimeout(r, 400));
+type Medicine = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  price: number | string;
+  manufacturer?: string | null;
+  imageUrl?: string | null;
+  category?: Category | null;
+};
 
-  const products: Product[] = [
-    {
-      id: "1",
-      name: "Vitamin C 500mg",
-      category: "vitamin",
-      price: 500,
-      salePrice: 400,
-      image: "/images/products/vitamin-c.jpg",
-      description:
-        "Vitamin C supports immunity, skin health, and antioxidant protection. Suitable for daily use.",
-    },
-    {
-      id: "2",
-      name: "Cef-3 DS",
-      category: "antibiotic",
-      price: 450,
-      image: "/images/products/cef-3.jpg",
-      description:
-        "Broad spectrum antibiotic used for bacterial infections. Use as directed by a physician.",
-    },
-  ];
+function resolveImage(m: Medicine) {
+  return (
+    (m.imageUrl && m.imageUrl.trim() ? m.imageUrl : null) ??
+    PRODUCT_IMAGE_MAP[m.slug] ??
+    "/images/placeholder.png"
+  );
+}
 
-  return products.find((p) => p.id === id) ?? null;
+async function getMedicine(id: string): Promise<Medicine | null> {
+  try {
+    return await serverApi<Medicine>(`/medicines/${id}`, { cache: "no-store" });
+  } catch {
+    return null;
+  }
 }
 
 export default async function ProductDetailsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const product = await getProduct(params.id);
+  const { id } = await params;
 
+  const product = await getMedicine(id);
   if (!product) notFound();
-
-  const hasDiscount = product.salePrice && product.salePrice < product.price;
 
   return (
     <main className="pb-14">
       <div className="mx-auto max-w-6xl px-4">
-        {/* Breadcrumb */}
         <div className="py-6 text-sm text-muted-foreground">
           <Link href="/" className="hover:underline">
             Home
@@ -73,12 +68,11 @@ export default async function ProductDetailsPage({
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Image */}
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               <div className="relative aspect-square bg-muted">
                 <Image
-                  src={product.image}
+                  src={resolveImage(product)}
                   alt={product.name}
                   fill
                   className="object-cover"
@@ -88,51 +82,39 @@ export default async function ProductDetailsPage({
             </CardContent>
           </Card>
 
-          {/* Info */}
           <div className="space-y-4">
-            <Badge variant="secondary" className="w-fit capitalize">
-              {product.category}
-            </Badge>
+            {product.category?.slug ? (
+              <Badge variant="secondary" className="w-fit capitalize">
+                {product.category.slug}
+              </Badge>
+            ) : null}
 
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               {product.name}
             </h1>
 
-            {/* Price */}
             <div className="flex items-center gap-3">
-              {hasDiscount ? (
-                <>
-                  <span className="text-2xl font-semibold">
-                    ৳{product.salePrice}
-                  </span>
-                  <span className="text-sm text-muted-foreground line-through">
-                    ৳{product.price}
-                  </span>
-                </>
-              ) : (
-                <span className="text-2xl font-semibold">৳{product.price}</span>
-              )}
+              <span className="text-2xl font-semibold">
+                ৳{Number(product.price)}
+              </span>
             </div>
 
             <Separator />
 
-            {/* Description */}
             <p className="text-sm leading-6 text-muted-foreground">
-              {product.description}
+              {product.description ?? "No description available."}
             </p>
 
-            {/* CTA */}
             <div className="pt-4">
-              <Button size="lg" className="w-full sm:w-auto">
-                Add to Cart
-              </Button>
+              <AddToCartButton
+                id={product.id}
+                slug={product.slug}
+                name={product.name}
+                price={product.price}
+                manufacturer={product.manufacturer ?? undefined}
+                imageUrl={resolveImage(product)}
+              />
             </div>
-
-            {/* Safety note */}
-            <p className="pt-2 text-xs text-muted-foreground">
-              ⚠️ This is an over-the-counter medicine. Read label instructions
-              carefully. Consult a healthcare professional if needed.
-            </p>
           </div>
         </div>
       </div>

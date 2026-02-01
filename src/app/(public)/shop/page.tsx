@@ -12,6 +12,6 @@ export default async function ShopRoute({
 }: {
   searchParams: Promise<ShopSearchParams>;
 }) {
-  const sp = await searchParams; 
+  const sp = await searchParams;
   return <ShopPage searchParams={sp} />;
 }

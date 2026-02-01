@@ -128,7 +128,7 @@
   }
 
   html {
-    scrollbar-gutter: stable;
+    scrollbar-gutter: stable both-edges;
     background: var(--background);
   }
 
@@ -136,9 +136,19 @@
     @apply bg-background text-foreground antialiased;
     background: var(--background);
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: scroll;
     font-family: var(--font-inter);
     font-feature-settings: "liga" 1, "calt" 1;
+    --removed-body-scroll-bar-size: 0px;
+  }
+
+  body[data-scroll-locked] {
+     padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  body[style*="padding-right"] {
+    padding-right: 0 !important;
   }
 
   h1,

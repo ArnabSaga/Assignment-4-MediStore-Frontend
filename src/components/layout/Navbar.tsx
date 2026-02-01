@@ -7,7 +7,7 @@ import {
   Menu,
   LogOut,
   LayoutDashboard,
-  ShoppingBag,
+  ShoppingCart,
   User2,
 } from "lucide-react";
 
@@ -40,6 +40,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { authClient } from "@/lib/auth-client";
 import { useSession } from "@/hooks/use-session";
+import { useCartStore } from "@/lib/cart-store";
+
+type Role = "CUSTOMER" | "SELLER" | "ADMIN";
 
 interface MenuItem {
   title: string;
@@ -92,6 +95,10 @@ export function Navbar({
 }: NavbarProps) {
   const { loading, user, refresh } = useSession();
 
+  const cartCount = useCartStore((s) =>
+    s.items.reduce((sum, item) => sum + (item.qty ?? 0), 0)
+  );
+
   const [hidden, setHidden] = React.useState(false);
   const lastY = React.useRef(0);
   const ticking = React.useRef(false);
@@ -134,44 +141,35 @@ export function Navbar({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const role = user?.role;
+  const role = (user?.role ?? null) as Role | null;
+  const isCustomer = role === "CUSTOMER";
 
   const dashboardHref =
-    role === "ADMIN"
-      ? "/admin"
-      : role === "SELLER"
-        ? "/seller/dashboard"
-        : "/account"; 
+    role === "ADMIN" ? "/admin" : role === "SELLER" ? "/seller/dashboard" : "/";
 
-  const menuItems:
-    | { label: string; href: string; icon: React.ElementType }[]
-    | [] = !role
-    ? []
-    : role === "ADMIN" || role === "SELLER"
-      ? [
-          {
-            label: "Dashboard",
-            href: dashboardHref,
-            icon: LayoutDashboard,
-          },
-        ]
-      : [
-          {
-            label: "Orders",
-            href: "/account/orders",
-            icon: ShoppingBag,
-          },
-          {
-            label: "Cart",
-            href: "/account/cart",
-            icon: ShoppingBag,
-          },
-          {
-            label: "Profile",
-            href: "/account/profile",
-            icon: User2,
-          },
-        ];
+  const menuItems: { label: string; href: string; icon: React.ElementType }[] =
+    !role
+      ? []
+      : role === "ADMIN" || role === "SELLER"
+        ? [
+            {
+              label: "Dashboard",
+              href: dashboardHref,
+              icon: LayoutDashboard,
+            },
+          ]
+        : [
+            {
+              label: "Profile",
+              href: "/account/profile",
+              icon: User2,
+            },
+            {
+              label: "Orders",
+              href: "/account/orders",
+              icon: ShoppingCart,
+            },
+          ];
 
   const handleLogout = async () => {
     try {
@@ -179,7 +177,7 @@ export function Navbar({
       await refresh();
       window.location.href = "/";
     } catch (error) {
-      console.log(error)
+      console.error(error);
     }
   };
 
@@ -195,7 +193,6 @@ export function Navbar({
         )}
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          {/* Logo */}
           <Link href="/" className="group inline-flex items-center gap-3">
             <span className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-xl border border-border bg-card">
               <Image
@@ -214,7 +211,6 @@ export function Navbar({
             </span>
           </Link>
 
-          {/* Desktop Nav */}
           <nav className="hidden items-center gap-6 lg:flex">
             <NavigationMenu>
               <NavigationMenuList className="gap-1">
@@ -236,10 +232,29 @@ export function Navbar({
 
           {/* Desktop Actions */}
           <div className="hidden items-center gap-2 lg:flex">
+            {loading ? null : user && isCustomer ? (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="btn-outline relative gap-2"
+              >
+                <Link href="/cart">
+                  <ShoppingCart className="h-4 w-4" />
+                  Cart
+                  {cartCount > 0 ? (
+                    <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      {cartCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </Button>
+            ) : null}
+
             <ModeToggle />
 
             {loading ? null : user ? (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
@@ -257,7 +272,6 @@ export function Navbar({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent align="end" className="w-56">
-                  {/* Top */}
                   <DropdownMenuLabel className="space-y-1">
                     <p className="text-sm font-medium leading-none">
                       {user.name ?? "Account"}
@@ -267,14 +281,13 @@ export function Navbar({
                     </p>
                     {role ? (
                       <p className="text-[11px] text-muted-foreground">
-                        Role: {role}
+                        Login as: {role}
                       </p>
                     ) : null}
                   </DropdownMenuLabel>
 
                   <DropdownMenuSeparator />
 
-                  {/* Middle menu (role-based) */}
                   {menuItems.map((item) => (
                     <DropdownMenuItem asChild key={item.href}>
                       <Link
@@ -289,7 +302,6 @@ export function Navbar({
 
                   <DropdownMenuSeparator />
 
-                  {/* Bottom */}
                   <DropdownMenuItem
                     onClick={handleLogout}
                     className="flex items-center gap-2 text-destructive focus:text-destructive"
@@ -316,8 +328,26 @@ export function Navbar({
             )}
           </div>
 
-          {/* Mobile */}
           <div className="flex items-center gap-2 lg:hidden">
+            {loading ? null : user && isCustomer ? (
+              <Button
+                asChild
+                variant="outline"
+                size="icon"
+                className="btn-outline relative"
+              >
+                <Link href="/cart">
+                  <ShoppingCart className="h-4 w-4" />
+                  <span className="sr-only">Cart</span>
+                  {cartCount > 0 ? (
+                    <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      {cartCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </Button>
+            ) : null}
+
             <ModeToggle />
 
             <Sheet>
@@ -361,7 +391,6 @@ export function Navbar({
                 <div className="mt-6 flex flex-col gap-3">
                   {loading ? null : user ? (
                     <>
-                      {/* Top */}
                       <div className="rounded-xl border bg-card p-3">
                         <p className="truncate text-sm font-medium">
                           {user.name ?? "Account"}
@@ -376,7 +405,27 @@ export function Navbar({
                         ) : null}
                       </div>
 
-                      {/* Middle menu (role-based) */}
+                      {isCustomer ? (
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="btn-outline justify-start"
+                        >
+                          <Link
+                            href="/cart"
+                            className="flex items-center gap-2"
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                            Cart
+                            {cartCount > 0 ? (
+                              <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                {cartCount}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </Button>
+                      ) : null}
+
                       {menuItems.map((item) => (
                         <Button
                           asChild
@@ -388,7 +437,6 @@ export function Navbar({
                         </Button>
                       ))}
 
-                      {/* Bottom */}
                       <Button
                         variant="outline"
                         className="btn-outline"

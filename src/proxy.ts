@@ -23,7 +23,7 @@ async function getRole(req: NextRequest): Promise<Role | null> {
   try {
     const cookie = req.headers.get("cookie") ?? "";
 
-    const backend = process.env.BACKEND_URL ?? "http://localhost:5000";
+    const backend = process.env.BACKEND_URL;
     const sessionUrl = new URL(SESSION_PATH, backend);
 
     const res = await fetch(sessionUrl, {
@@ -85,8 +85,9 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (role === "ADMIN") return redirect(req, "/admin");
-  if (role === "SELLER") return redirect(req, "/seller/dashboard");
+  if (pathname.startsWith("/account")) {
+    return NextResponse.next();
+  }
 
   return NextResponse.next();
 }

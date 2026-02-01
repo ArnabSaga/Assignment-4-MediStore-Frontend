@@ -1,48 +1,54 @@
+import { serverApi } from "@/lib/server-api";
+import { ProductCard } from "./product-card";
+import { PRODUCT_IMAGE_MAP } from "@/lib/product-images";
 
-import { ProductCard } from './product-card';
-
-type Product = {
+type Category = {
   id: string;
   name: string;
-  price: number;
-  salePrice?: number;
-  image: string;
-  category: string;
+  slug: string;
 };
 
-async function getProducts(category?: string, q?: string): Promise<Product[]> {
-  // 🔁 Replace with real API later
-  await new Promise((r) => setTimeout(r, 600)); // demo delay
+type Medicine = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number | string;
+  imageUrl?: string | null;
+  category?: Category | null;
+};
 
-  return [
-    {
-      id: "1",
-      name: "Vitamin C 500mg",
-      price: 500,
-      salePrice: 400,
-      image: "/images/products/vitamin-becosules.webp",
-      category: "vitamin",
-    },
-    {
-      id: "2",
-      name: "Cef-3 DS",
-      price: 450,
-      image: "/images/products/antibiotic-cef-3.webp",
-      category: "antibiotic",
-    },
-    {
-      id: "3",
-      name: "Fexo 180",
-      price: 350,
-      salePrice: 299,
-      image: "/images/products/allergy-fexo.webp",
-      category: "allergy",
-    },
-  ].filter((p) => {
-    if (category && p.category !== category) return false;
-    if (q && !p.name.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
+async function getCategoryIdFromSlug(slug?: string) {
+  if (!slug) return undefined;
+
+  const categories = await serverApi<Category[]>("/categories", {
+    cache: "no-store",
   });
+
+  const match = categories.find((c) => c.slug === slug);
+  return match?.id;
+}
+
+async function getMedicines(categorySlug?: string, q?: string) {
+  const params = new URLSearchParams();
+
+  if (q) params.set("search", q);
+
+  const categoryId = await getCategoryIdFromSlug(categorySlug);
+  if (categoryId) params.set("categoryId", categoryId);
+
+  const qs = params.toString();
+  const path = qs ? `/medicines?${qs}` : "/medicines";
+
+  return serverApi<Medicine[]>(path, { cache: "no-store" });
+}
+
+function resolveImage(m: Medicine) {
+
+  return (
+    (m.imageUrl && m.imageUrl.trim() ? m.imageUrl : null) ??
+    PRODUCT_IMAGE_MAP[m.slug] ??
+    "/images/placeholder.png"
+  );
 }
 
 export async function ProductGrid({
@@ -52,9 +58,9 @@ export async function ProductGrid({
   category?: string;
   q?: string;
 }) {
-  const products = await getProducts(category, q);
+  const items = await getMedicines(category, q);
 
-  if (!products.length) {
+  if (items.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-10 text-center">
         <p className="text-sm text-muted-foreground">
@@ -67,12 +73,19 @@ export async function ProductGrid({
   return (
     <>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {products.map((p) => (
-          <ProductCard key={p.id} product={p} />
+        {items.map((p) => (
+          <ProductCard
+            key={p.id}
+            product={{
+              id: p.id,
+              name: p.name,
+              price: Number(p.price),
+              image: resolveImage(p),
+            }}
+          />
         ))}
       </div>
 
-      {/* Load more (UI-only for now) */}
       <div className="mt-8 flex justify-center">
         <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">
           Load more
