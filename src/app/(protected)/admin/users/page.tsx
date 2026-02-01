@@ -88,6 +88,11 @@ function formatDate(iso: string) {
   return d.toLocaleString();
 }
 
+function clampId(id: string) {
+  if (!id) return "";
+  return id.length > 14 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id;
+}
+
 export default function AdminUsersPage() {
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -272,20 +277,20 @@ export default function AdminUsersPage() {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name, email, id…"
-          className="md:max-w-md"
+          className="w-full lg:max-w-md"
         />
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:gap-3">
           <Select
             value={roleFilter}
             onValueChange={(v) => setRoleFilter(v as Role | "ALL")}
           >
-            <SelectTrigger className="w-45">
+            <SelectTrigger className="w-full sm:w-auto sm:min-w-45">
               <SelectValue placeholder="Role" />
             </SelectTrigger>
             <SelectContent>
@@ -302,7 +307,7 @@ export default function AdminUsersPage() {
               setBanFilter(v as "ALL" | "BANNED" | "ACTIVE")
             }
           >
-            <SelectTrigger className="w-45">
+            <SelectTrigger className="w-full sm:w-auto sm:min-w-45">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -314,16 +319,109 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border">
+      <div className="grid gap-3 md:hidden">
+        {loading ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            Loading users…
+          </div>
+        ) : pageItems.length === 0 ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            No users found.
+          </div>
+        ) : (
+          pageItems.map((u) => {
+            const busy = busyId === u.id;
+
+            return (
+              <div key={u.id} className="rounded-2xl border p-4 space-y-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-semibold">{u.name}</div>
+                  <div className="text-xs text-muted-foreground break-all">
+                    {u.email}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    ID: <span className="font-mono">{clampId(u.id)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Role</div>
+                    <Select
+                      value={u.role}
+                      onValueChange={(v) => void onChangeRole(u, v as Role)}
+                      disabled={busy}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CUSTOMER">CUSTOMER</SelectItem>
+                        <SelectItem value="SELLER">SELLER</SelectItem>
+                        <SelectItem value="ADMIN">ADMIN</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Status</div>
+                    <span className="inline-flex w-fit rounded-md border px-2 py-1 text-xs">
+                      {u.isBanned ? "BANNED" : "ACTIVE"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">
+                      Verified
+                    </div>
+                    <span className="inline-flex w-fit rounded-md border px-2 py-1 text-xs">
+                      {u.emailVerified ? "YES" : "NO"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Created</div>
+                    <div className="text-sm">{formatDate(u.createdAt)}</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={u.isBanned ? "secondary" : "outline"}
+                    onClick={() => void onToggleBan(u)}
+                    disabled={busy}
+                    className="flex-1"
+                  >
+                    {busy ? "..." : u.isBanned ? "Unban" : "Ban"}
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => void onDelete(u)}
+                    disabled={busy}
+                    className="flex-1 text-black dark:text-white"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden md:block rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Verified</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="min-w-65">User</TableHead>
+              <TableHead className="min-w-50">Role</TableHead>
+              <TableHead className="min-w-30">Status</TableHead>
+              <TableHead className="min-w-30">Verified</TableHead>
+              <TableHead className="min-w-45">Created</TableHead>
+              <TableHead className="text-right min-w-55">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -352,7 +450,7 @@ export default function AdminUsersPage() {
                         <span className="text-xs text-muted-foreground">
                           {u.email}
                         </span>
-                        <span className="text-[11px] text-muted-foreground truncate">
+                        <span className="text-[11px] text-muted-foreground truncate max-w-105">
                           {u.id}
                         </span>
                       </div>
@@ -364,7 +462,7 @@ export default function AdminUsersPage() {
                         onValueChange={(v) => void onChangeRole(u, v as Role)}
                         disabled={busy}
                       >
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-45">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -376,18 +474,18 @@ export default function AdminUsersPage() {
                     </TableCell>
 
                     <TableCell>
-                      <span className="rounded-md border px-2 py-1 text-xs">
+                      <span className="rounded-md border px-2 py-1 text-xs whitespace-nowrap">
                         {u.isBanned ? "BANNED" : "ACTIVE"}
                       </span>
                     </TableCell>
 
                     <TableCell>
-                      <span className="rounded-md border px-2 py-1 text-xs">
+                      <span className="rounded-md border px-2 py-1 text-xs whitespace-nowrap">
                         {u.emailVerified ? "YES" : "NO"}
                       </span>
                     </TableCell>
 
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm whitespace-nowrap">
                       {formatDate(u.createdAt)}
                     </TableCell>
 
@@ -407,6 +505,7 @@ export default function AdminUsersPage() {
                           variant="destructive"
                           onClick={() => void onDelete(u)}
                           disabled={busy}
+                          className="text-black dark:text-white"
                         >
                           Delete
                         </Button>
@@ -421,7 +520,7 @@ export default function AdminUsersPage() {
       </div>
 
       {!loading && total > 0 ? (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Page {page} of {maxPage} • Total {total}
           </p>

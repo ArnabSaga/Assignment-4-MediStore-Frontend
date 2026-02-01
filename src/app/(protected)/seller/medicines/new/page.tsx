@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 
 import { CreateMedicineForm } from "@/components/seller/create-medicine-form";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+const BACKEND_URL = process.env.BACKEND_URL;
 
 type Category = { id: string; name: string; slug: string };
 

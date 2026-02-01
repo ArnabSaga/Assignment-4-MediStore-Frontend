@@ -114,6 +114,18 @@ function formatBDT(amount: number) {
   }
 }
 
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
+}
+
+function clampText(v: string, left = 14, right = 10) {
+  if (!v) return "";
+  if (v.length <= left + right + 1) return v;
+  return `${v.slice(0, left)}…${v.slice(-right)}`;
+}
+
 const STATUS_OPTIONS: OrderStatus[] = [
   "PLACED",
   "PROCESSING",
@@ -167,7 +179,7 @@ async function fetchSellerOrderById(
 
   const mappedItems: OrderItem[] = orderItems.map((it) => ({
     id: it.id,
-    quantity: toNumber(it.quantity),
+    quantity: Math.trunc(toNumber(it.quantity)),
     price: toNumber(it.price),
     medicine: it.medicine
       ? {
@@ -271,6 +283,7 @@ export default function SellerOrderDetailsPage() {
 
     try {
       const updated = await updateOrderStatus(order.id, status);
+
       setOrder((prev) =>
         prev
           ? {
@@ -295,7 +308,7 @@ export default function SellerOrderDetailsPage() {
 
   return (
     <main className="space-y-6 p-4 md:p-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
@@ -303,7 +316,8 @@ export default function SellerOrderDetailsPage() {
             </Button>
             <h1 className="text-xl font-semibold">Order Details</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
+
+          <p className="text-sm text-muted-foreground break-all">
             {order?.id ? `Order ID: ${order.id}` : id ? `Order ID: ${id}` : ""}
           </p>
         </div>
@@ -312,13 +326,14 @@ export default function SellerOrderDetailsPage() {
           variant="outline"
           onClick={() => void load()}
           disabled={loading || saving}
+          className="w-full sm:w-auto"
         >
           Refresh
         </Button>
       </div>
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
@@ -338,47 +353,106 @@ export default function SellerOrderDetailsPage() {
             </div>
             <Separator />
 
-            <div className="p-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Medicine</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Line total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {order.items.map((it) => (
-                    <TableRow key={it.id}>
-                      <TableCell className="font-medium">
-                        {it.medicine?.name ?? "Medicine"}
-                        <div className="text-xs text-muted-foreground">
-                          {it.medicine?.id ?? ""}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatBDT(it.price)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {it.quantity}
-                      </TableCell>
-                      <TableCell className="text-right">
+            <div className="p-4 space-y-3 md:hidden">
+              {order.items.map((it) => (
+                <div key={it.id} className="rounded-2xl border p-4 space-y-3">
+                  <div className="min-w-0">
+                    <div className="text-xs text-muted-foreground">
+                      Medicine
+                    </div>
+                    <div className="font-semibold truncate">
+                      {it.medicine?.name ?? "Medicine"}
+                    </div>
+                    <div className="mt-1 text-[11px] text-muted-foreground font-mono break-all">
+                      {it.medicine?.id ?? ""}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="space-y-0.5">
+                      <div className="text-xs text-muted-foreground">Price</div>
+                      <div className="font-medium">{formatBDT(it.price)}</div>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <div className="text-xs text-muted-foreground">Qty</div>
+                      <div className="font-medium">{it.quantity}</div>
+                    </div>
+
+                    <div className="col-span-2 space-y-0.5">
+                      <div className="text-xs text-muted-foreground">
+                        Line total
+                      </div>
+                      <div className="font-medium">
                         {formatBDT(it.price * it.quantity)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="rounded-2xl border p-4 flex items-center justify-between">
+                <span className="font-semibold">Subtotal</span>
+                <span className="font-semibold">{formatBDT(subtotal)}</span>
+              </div>
+            </div>
+
+            <div className="hidden md:block p-4">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-65">Medicine</TableHead>
+                      <TableHead className="text-right min-w-35">
+                        Price
+                      </TableHead>
+                      <TableHead className="text-right min-w-22.5">
+                        Qty
+                      </TableHead>
+                      <TableHead className="text-right min-w-40">
+                        Line total
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {order.items.map((it) => (
+                      <TableRow key={it.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col min-w-0">
+                            <span className="truncate">
+                              {it.medicine?.name ?? "Medicine"}
+                            </span>
+                            <div className="text-xs text-muted-foreground font-mono truncate max-w-105">
+                              {it.medicine?.id ?? ""}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          {formatBDT(it.price)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {it.quantity}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          {formatBDT(it.price * it.quantity)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-right font-semibold"
+                      >
+                        Subtotal
+                      </TableCell>
+                      <TableCell className="text-right font-semibold whitespace-nowrap">
+                        {formatBDT(subtotal)}
                       </TableCell>
                     </TableRow>
-                  ))}
-
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right font-semibold">
-                      Subtotal
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatBDT(subtotal)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </section>
 
@@ -389,7 +463,7 @@ export default function SellerOrderDetailsPage() {
               <div className="text-sm space-y-2">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Customer</span>
-                  <span className="text-right">
+                  <span className="text-right truncate max-w-[60%]">
                     {order.customer?.name ?? "Customer"}
                   </span>
                 </div>
@@ -397,14 +471,18 @@ export default function SellerOrderDetailsPage() {
                 {order.customer?.email ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Email</span>
-                    <span className="text-right">{order.customer.email}</span>
+                    <span className="text-right truncate max-w-[60%]">
+                      {order.customer.email}
+                    </span>
                   </div>
                 ) : null}
 
                 {order.customer?.phone ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Phone</span>
-                    <span className="text-right">{order.customer.phone}</span>
+                    <span className="text-right truncate max-w-[60%]">
+                      {order.customer.phone}
+                    </span>
                   </div>
                 ) : null}
 
@@ -412,9 +490,24 @@ export default function SellerOrderDetailsPage() {
 
                 <div className="flex justify-between gap-3 text-base font-semibold">
                   <span>Total</span>
-                  <span className="text-right">
+                  <span className="text-right whitespace-nowrap">
                     {formatBDT(order.totalAmount)}
                   </span>
+                </div>
+
+                <div className="pt-1 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Created</span>
+                    <span className="text-right">
+                      {formatDate(order.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Updated</span>
+                    <span className="text-right">
+                      {formatDate(order.updatedAt)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -426,8 +519,9 @@ export default function SellerOrderDetailsPage() {
                 <Select
                   value={status}
                   onValueChange={(v) => setStatus(v as OrderStatus)}
+                  disabled={saving}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -451,6 +545,10 @@ export default function SellerOrderDetailsPage() {
                   Current status:{" "}
                   <span className="font-medium">{order.status}</span>
                 </p>
+
+                <div className="pt-1 text-[11px] text-muted-foreground font-mono break-all">
+                  {order.id ? `#${clampText(order.id, 18, 12)}` : ""}
+                </div>
               </div>
             </div>
           </aside>

@@ -65,7 +65,7 @@ type ApiResponse<T> = {
 const API = {
   categories: "/api/v1/categories",
   medicines: (qs: string) => `/api/v1/medicines?${qs}`,
-  adminMedicine: (id: string) => `/api/v1/admin/medicines/${id}`, 
+  adminMedicine: (id: string) => `/api/v1/admin/medicines/${id}`,
 } as const;
 
 function toNumber(v: unknown, fallback = 0) {
@@ -156,6 +156,27 @@ function normalizeMedicine(raw: any): Medicine {
   };
 }
 
+function clampId(id: string, left = 10, right = 6) {
+  if (!id) return "";
+  if (id.length <= left + right + 1) return id;
+  return `${id.slice(0, left)}…${id.slice(-right)}`;
+}
+
+function statusPill(active: boolean) {
+  return (
+    <span
+      className={[
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+        active
+          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+          : "bg-muted text-muted-foreground",
+      ].join(" ")}
+    >
+      {active ? "ACTIVE" : "INACTIVE"}
+    </span>
+  );
+}
+
 export default function AdminMedicinesPage() {
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -166,13 +187,12 @@ export default function AdminMedicinesPage() {
   const [medicines, setMedicines] = React.useState<Medicine[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
 
-  //* Filters
   const [search, setSearch] = React.useState("");
   const [categoryId, setCategoryId] = React.useState<string>("ALL");
-  const [page, setPage] = React.useState(1);
-  const [limit] = React.useState(20);
 
-  //* Edit dialog state
+  const [page, setPage] = React.useState(1);
+  const limit = 4;
+
   const [open, setOpen] = React.useState(false);
   const [current, setCurrent] = React.useState<Medicine | null>(null);
 
@@ -185,22 +205,22 @@ export default function AdminMedicinesPage() {
   const [eImageUrl, setEImageUrl] = React.useState("");
   const [eDescription, setEDescription] = React.useState("");
 
+  const [hasNext, setHasNext] = React.useState(false);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      //* categories
       const catRes = await readJSON<ApiResponse<Category[]>>(API.categories);
       if (!catRes.success)
         throw new Error(catRes.message || "Failed to load categories");
       setCategories(catRes.data ?? []);
 
-      //* medicines list (public)
       const params = new URLSearchParams();
       params.set("page", String(page));
-      params.set("limit", String(limit));
+      params.set("limit", String(limit + 1)); // 👈 important
       if (search.trim()) params.set("search", search.trim());
       if (categoryId !== "ALL") params.set("categoryId", categoryId);
 
@@ -210,12 +230,20 @@ export default function AdminMedicinesPage() {
       if (!medRes.success)
         throw new Error(medRes.message || "Failed to load medicines");
 
-      const list = Array.isArray(medRes.data)
-        ? medRes.data.map(normalizeMedicine)
-        : [];
-      setMedicines(list);
+      const raw = Array.isArray(medRes.data) ? medRes.data : [];
+      const list = raw.map(normalizeMedicine);
+
+      setHasNext(list.length > limit);
+
+      setMedicines(list.slice(0, limit));
+
+      if (page > 1 && list.length === 0) {
+        setPage(1);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load medicines");
+      setHasNext(false);
+      setMedicines([]);
     } finally {
       setLoading(false);
     }
@@ -333,14 +361,16 @@ export default function AdminMedicinesPage() {
       if (!res.success)
         throw new Error(res.message || "Failed to delete medicine");
 
-      setMedicines((prev) => prev.filter((x) => x.id !== m.id));
       setSuccess("Medicine deleted successfully.");
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete medicine");
     } finally {
       setBusyId(null);
     }
   };
+
+  const isRowBusy = (id: string) => busyId === id;
 
   return (
     <main className="space-y-6">
@@ -359,7 +389,7 @@ export default function AdminMedicinesPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
@@ -370,22 +400,27 @@ export default function AdminMedicinesPage() {
         </div>
       ) : null}
 
-      {/* Filters */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Filters</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+
+        <CardContent className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, manufacturer, description…"
-            className="md:max-w-md"
+            className="w-full lg:max-w-md"
+            disabled={loading}
           />
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="w-55">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Select
+              value={categoryId}
+              onValueChange={setCategoryId}
+              disabled={loading}
+            >
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -398,39 +433,132 @@ export default function AdminMedicinesPage() {
               </SelectContent>
             </Select>
 
-            <div className="flex gap-2">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={loading || page <= 1}
+                className="sm:w-auto"
               >
                 Prev
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setPage((p) => p + 1)}
-                disabled={loading}
+                disabled={loading || !hasNext}
+                className="sm:w-auto"
               >
                 Next
               </Button>
             </div>
           </div>
         </CardContent>
+
+        <div className="px-6 pb-4 text-xs text-muted-foreground">
+          Page: <span className="font-medium">{page}</span> • Showing{" "}
+          <span className="font-medium">{limit}</span> per page
+        </div>
       </Card>
 
-      {/* List */}
-      <div className="rounded-lg border">
+      <div className="grid gap-3 md:hidden">
+        {loading ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            Loading medicines…
+          </div>
+        ) : medicines.length === 0 ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            No medicines found.
+          </div>
+        ) : (
+          medicines.map((m) => {
+            const busy = isRowBusy(m.id);
+
+            return (
+              <div key={m.id} className="rounded-2xl border p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{m.name}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground font-mono">
+                      {clampId(m.id)}
+                    </div>
+                  </div>
+                  {statusPill(m.isActive)}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-0.5">
+                    <div className="text-xs text-muted-foreground">
+                      Category
+                    </div>
+                    <div className="truncate">{m.category?.name ?? "—"}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs text-muted-foreground">
+                      Manufacturer
+                    </div>
+                    <div className="truncate">{m.manufacturer || "—"}</div>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <div className="text-xs text-muted-foreground">Price</div>
+                    <div className="font-medium">{fmtBDT(m.price)}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs text-muted-foreground">Stock</div>
+                    <div className="font-medium">{m.stock}</div>
+                  </div>
+
+                  <div className="col-span-2 space-y-0.5">
+                    <div className="text-xs text-muted-foreground">Seller</div>
+                    <div className="truncate">{m.seller?.name ?? "—"}</div>
+                  </div>
+
+                  <div className="col-span-2 space-y-0.5">
+                    <div className="text-xs text-muted-foreground">Created</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(m.createdAt)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => openEdit(m)}
+                    disabled={busy || !!busyId}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="flex-1 text-black dark:text-white"
+                    onClick={() => void onDelete(m)}
+                    disabled={busy || !!busyId}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden md:block rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Medicine</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Manufacturer</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Stock</TableHead>
-              <TableHead>Seller</TableHead>
-              <TableHead className="text-right">Created</TableHead>
-              <TableHead className="text-right">Action</TableHead>
+              <TableHead className="min-w-65">Medicine</TableHead>
+              <TableHead className="min-w-45">Category</TableHead>
+              <TableHead className="min-w-45">Manufacturer</TableHead>
+              <TableHead className="text-right min-w-27.5">Price</TableHead>
+              <TableHead className="text-right min-w-22.5">Stock</TableHead>
+              <TableHead className="min-w-45">Seller</TableHead>
+              <TableHead className="text-right min-w-45">Created</TableHead>
+              <TableHead className="text-right min-w-55">Action</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -449,21 +577,22 @@ export default function AdminMedicinesPage() {
               </TableRow>
             ) : (
               medicines.map((m) => {
-                const busy = busyId === m.id;
+                const busy = isRowBusy(m.id);
 
                 return (
                   <TableRow key={m.id}>
                     <TableCell className="font-medium">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col min-w-0">
                         <span className="truncate">{m.name}</span>
-                        <span className="text-[11px] text-muted-foreground truncate">
+                        <span className="text-[11px] text-muted-foreground truncate font-mono max-w-95">
                           {m.id}
                         </span>
+                        <div className="mt-1">{statusPill(m.isActive)}</div>
                       </div>
                     </TableCell>
 
                     <TableCell className="text-sm text-muted-foreground">
-                      {m.category?.name ?? "-"}
+                      {m.category?.name ?? "—"}
                     </TableCell>
 
                     <TableCell className="text-sm">{m.manufacturer}</TableCell>
@@ -475,10 +604,10 @@ export default function AdminMedicinesPage() {
                     <TableCell className="text-right">{m.stock}</TableCell>
 
                     <TableCell className="text-sm text-muted-foreground">
-                      {m.seller?.name ?? "-"}
+                      {m.seller?.name ?? "—"}
                     </TableCell>
 
-                    <TableCell className="text-right text-sm text-muted-foreground">
+                    <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
                       {formatDate(m.createdAt)}
                     </TableCell>
 
@@ -497,6 +626,7 @@ export default function AdminMedicinesPage() {
                           variant="destructive"
                           onClick={() => void onDelete(m)}
                           disabled={busy || !!busyId}
+                          className="text-black dark:text-white"
                         >
                           Delete
                         </Button>
@@ -512,20 +642,31 @@ export default function AdminMedicinesPage() {
 
       <Separator />
 
-      {/* Edit Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) closeEdit();
+        }}
+      >
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl sm:w-full">
           <DialogHeader>
             <DialogTitle>Edit Medicine</DialogTitle>
             <DialogDescription>
-              Update fields and save. Backend rejects empty updates, so change
-              at least one field.
+              Update fields and save. Change at least one field.
             </DialogDescription>
           </DialogHeader>
 
           {!current ? null : (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <p className="text-xs text-muted-foreground">Medicine ID</p>
+                <div className="text-xs font-mono text-muted-foreground break-all">
+                  {current.id}
+                </div>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Name</p>
                 <Input
                   value={eName}
@@ -538,24 +679,6 @@ export default function AdminMedicinesPage() {
                 <Input
                   value={eManufacturer}
                   onChange={(e) => setEManufacturer(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Price</p>
-                <Input
-                  value={ePrice}
-                  onChange={(e) => setEPrice(e.target.value)}
-                  placeholder="e.g. 120"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Stock</p>
-                <Input
-                  value={eStock}
-                  onChange={(e) => setEStock(e.target.value)}
-                  placeholder="e.g. 50"
                 />
               </div>
 
@@ -576,6 +699,26 @@ export default function AdminMedicinesPage() {
               </div>
 
               <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Price</p>
+                <Input
+                  value={ePrice}
+                  onChange={(e) => setEPrice(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="e.g. 120"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Stock</p>
+                <Input
+                  value={eStock}
+                  onChange={(e) => setEStock(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="e.g. 50"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Active</p>
                 <Select
                   value={eIsActive}
@@ -591,7 +734,7 @@ export default function AdminMedicinesPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Image URL</p>
                 <Input
                   value={eImageUrl}
@@ -600,7 +743,7 @@ export default function AdminMedicinesPage() {
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Description</p>
                 <Input
                   value={eDescription}
@@ -611,7 +754,7 @@ export default function AdminMedicinesPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={closeEdit} disabled={!!busyId}>
               Cancel
             </Button>

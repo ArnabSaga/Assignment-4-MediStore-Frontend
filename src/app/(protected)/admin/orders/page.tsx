@@ -83,6 +83,26 @@ function formatDate(iso: string) {
   return d.toLocaleString();
 }
 
+function clampId(id: string) {
+  if (!id) return "";
+  return id.length > 18 ? `${id.slice(0, 10)}…${id.slice(-6)}` : id;
+}
+
+function summarizeMedicines(items?: OrderListItem["items"]) {
+  const safe = items ?? [];
+  const names = safe
+    .map((it) => it.medicine?.name?.trim())
+    .filter(Boolean) as string[];
+
+  if (names.length === 0) return "—";
+
+  const uniq = Array.from(new Set(names));
+  const shown = uniq.slice(0, 2);
+  const remaining = uniq.length - shown.length;
+
+  return remaining > 0 ? `${shown.join(", ")} +${remaining}` : shown.join(", ");
+}
+
 const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
   { label: "All", value: "ALL" },
   { label: "Placed", value: "PLACED" },
@@ -200,19 +220,19 @@ export default function AdminOrdersPage() {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by order id, customer, medicine…"
-          className="md:max-w-md"
+          className="w-full lg:max-w-md"
         />
 
         <Select
           value={status}
           onValueChange={(v) => setStatus(v as OrderStatus | "ALL")}
         >
-          <SelectTrigger className="w-52">
+          <SelectTrigger className="w-full lg:w-52">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -225,17 +245,92 @@ export default function AdminOrdersPage() {
         </Select>
       </div>
 
-      <div className="rounded-lg border">
+      <div className="grid gap-3 md:hidden">
+        {loading ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            Loading orders…
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            No orders found.
+          </div>
+        ) : (
+          orders.map((o) => {
+            const itemsCount = o._count?.items ?? o.items?.length ?? 0;
+            const medSummary = summarizeMedicines(o.items);
+
+            return (
+              <div key={o.id} className="rounded-2xl border p-4 space-y-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-semibold">Order</div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {clampId(o.id)}
+                  </div>
+                  {medSummary !== "—" ? (
+                    <div className="text-xs text-muted-foreground truncate">
+                      {medSummary}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">
+                      Customer
+                    </div>
+                    <div className="text-sm font-medium truncate">
+                      {o.customer?.name ?? "Customer"}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {o.customer?.email ?? ""}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Status</div>
+                    <div className="text-sm font-medium">{o.status}</div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Total</div>
+                    <div className="text-sm font-semibold">
+                      {formatBDT(o.totalAmount)}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Items</div>
+                    <div className="text-sm">{itemsCount}</div>
+                  </div>
+
+                  <div className="space-y-1 col-span-2">
+                    <div className="text-xs text-muted-foreground">Created</div>
+                    <div className="text-sm">{formatDate(o.createdAt)}</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button asChild size="sm" className="flex-1">
+                    <Link href={`/admin/orders/${o.id}`}>View</Link>
+                  </Button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden md:block rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-72">Order</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Items</TableHead>
-              <TableHead className="text-right">Created</TableHead>
-              <TableHead className="text-right">Action</TableHead>
+              <TableHead className="min-w-[320px]">Order</TableHead>
+              <TableHead className="min-w-55">Customer</TableHead>
+              <TableHead className="min-w-35">Status</TableHead>
+              <TableHead className="text-right min-w-35">Total</TableHead>
+              <TableHead className="text-right min-w-25">Items</TableHead>
+              <TableHead className="text-right min-w-55">Created</TableHead>
+              <TableHead className="text-right min-w-30">Action</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -257,39 +352,41 @@ export default function AdminOrdersPage() {
                 <TableRow key={o.id}>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
-                      <span className="truncate">{o.id}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {o.status}
+                      <span className="truncate max-w-130">{o.id}</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-130">
+                        {summarizeMedicines(o.items)}
                       </span>
                     </div>
                   </TableCell>
 
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="truncate">
+                      <span className="truncate max-w-65">
                         {o.customer?.name ?? "Customer"}
                       </span>
-                      <span className="text-xs text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate max-w-65">
                         {o.customer?.email ?? ""}
                       </span>
                     </div>
                   </TableCell>
 
-                  <TableCell>{o.status}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {o.status}
+                  </TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {formatBDT(o.totalAmount)}
                   </TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {o._count?.items ?? o.items?.length ?? "-"}
                   </TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {formatDate(o.createdAt)}
                   </TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <Button asChild size="sm">
                       <Link href={`/admin/orders/${o.id}`}>View</Link>
                     </Button>
@@ -301,7 +398,7 @@ export default function AdminOrdersPage() {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           Page {page} of {maxPage} • Total {total}
         </p>

@@ -96,6 +96,12 @@ async function delJSON<T>(url: string): Promise<T> {
   return json as T;
 }
 
+function clampText(v: string, left = 12, right = 6) {
+  if (!v) return "";
+  if (v.length <= left + right + 1) return v;
+  return `${v.slice(0, left)}…${v.slice(-right)}`;
+}
+
 export default function AdminCategoriesPage() {
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -130,7 +136,6 @@ export default function AdminCategoriesPage() {
       const list = res.data ?? [];
       setCategories(list);
 
-      // keep page in range after reload
       const maxPage = Math.max(1, Math.ceil(list.length / pageSize));
       setPage((p) => Math.min(p, maxPage));
     } catch (e) {
@@ -209,6 +214,8 @@ export default function AdminCategoriesPage() {
       setNewName("");
       setNewDescription("");
       setSuccess("Category created successfully.");
+
+      setPage(1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create category");
     } finally {
@@ -237,7 +244,6 @@ export default function AdminCategoriesPage() {
       }
 
       setCategories((prev) => prev.map((c) => (c.id === id ? res.data! : c)));
-
       cancelEdit();
       setSuccess("Category updated successfully.");
     } catch (e) {
@@ -259,13 +265,16 @@ export default function AdminCategoriesPage() {
 
     try {
       const res = await delJSON<ApiResponse<null>>(API.remove(c.id));
-
       if (!res.success)
         throw new Error(res.message || "Failed to delete category");
 
       setCategories((prev) => prev.filter((x) => x.id !== c.id));
       if (editingId === c.id) cancelEdit();
       setSuccess("Category deleted successfully.");
+
+      const remaining = total - 1;
+      const nextMax = Math.max(1, Math.ceil(remaining / pageSize));
+      setPage((p) => Math.min(p, nextMax));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete category");
     } finally {
@@ -292,7 +301,7 @@ export default function AdminCategoriesPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
@@ -303,7 +312,6 @@ export default function AdminCategoriesPage() {
         </div>
       ) : null}
 
-      {/* Create */}
       <Card>
         <CardHeader>
           <CardTitle>Create Category</CardTitle>
@@ -316,6 +324,7 @@ export default function AdminCategoriesPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Antibiotics"
+                disabled={creating}
               />
             </div>
 
@@ -327,6 +336,7 @@ export default function AdminCategoriesPage() {
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 placeholder="Short description…"
+                disabled={creating}
               />
             </div>
           </div>
@@ -339,32 +349,130 @@ export default function AdminCategoriesPage() {
               {creating ? "Creating…" : "Create"}
             </Button>
           </div>
-
-          <p className="text-xs text-muted-foreground">
-            Slug is generated automatically by the backend.
-          </p>
         </CardContent>
       </Card>
 
-      {/* Search */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search categories by name/slug/description…"
-          className="md:max-w-md"
+          placeholder="Search categories"
+          className="w-full sm:max-w-md"
         />
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border">
+      <div className="grid gap-3 md:hidden">
+        {loading ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            Loading categories…
+          </div>
+        ) : pageItems.length === 0 ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            No categories found.
+          </div>
+        ) : (
+          pageItems.map((c) => {
+            const busy = busyId === c.id;
+            const isEditing = editingId === c.id;
+
+            return (
+              <div key={c.id} className="rounded-2xl border p-4 space-y-3">
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Category</div>
+
+                  {isEditing ? (
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      disabled={busy}
+                    />
+                  ) : (
+                    <div className="text-base font-semibold">{c.name}</div>
+                  )}
+
+                  <div className="text-xs text-muted-foreground">
+                    Slug: <span className="font-mono">{c.slug}</span>
+                  </div>
+
+                  <div className="text-[11px] text-muted-foreground font-mono">
+                    ID: {clampText(c.id, 10, 6)}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">
+                    Description
+                  </div>
+                  {isEditing ? (
+                    <Input
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Description…"
+                      disabled={busy}
+                    />
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      {c.description?.trim() ? c.description : "—"}
+                    </div>
+                  )}
+                </div>
+
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => void onUpdate(c.id)}
+                      disabled={busy || !editName.trim()}
+                    >
+                      {busy ? "Saving…" : "Save"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={cancelEdit}
+                      disabled={busy}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => startEdit(c)}
+                      disabled={!!busyId}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1 text-black dark:text-white"
+                      onClick={() => void onDelete(c)}
+                      disabled={busy || !!busyId}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden md:block rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Category</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="min-w-65">Category</TableHead>
+              <TableHead className="min-w-45">Slug</TableHead>
+              <TableHead className="min-w-[320px]">Description</TableHead>
+              <TableHead className="text-right min-w-55">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -394,11 +502,12 @@ export default function AdminCategoriesPage() {
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                           className="max-w-sm"
+                          disabled={busy}
                         />
                       ) : (
                         <div className="flex flex-col">
                           <span>{c.name}</span>
-                          <span className="text-[11px] text-muted-foreground truncate">
+                          <span className="text-[11px] text-muted-foreground truncate max-w-90">
                             {c.id}
                           </span>
                         </div>
@@ -406,7 +515,7 @@ export default function AdminCategoriesPage() {
                     </TableCell>
 
                     <TableCell className="text-sm text-muted-foreground">
-                      {c.slug}
+                      <span className="font-mono">{c.slug}</span>
                     </TableCell>
 
                     <TableCell>
@@ -415,10 +524,11 @@ export default function AdminCategoriesPage() {
                           value={editDescription}
                           onChange={(e) => setEditDescription(e.target.value)}
                           placeholder="Description…"
+                          disabled={busy}
                         />
                       ) : (
                         <span className="text-sm text-muted-foreground">
-                          {c.description ?? "-"}
+                          {c.description ?? "—"}
                         </span>
                       )}
                     </TableCell>
@@ -457,6 +567,7 @@ export default function AdminCategoriesPage() {
                             variant="destructive"
                             onClick={() => void onDelete(c)}
                             disabled={busy || !!busyId}
+                            className="text-black dark:text-white"
                           >
                             Delete
                           </Button>
@@ -472,7 +583,7 @@ export default function AdminCategoriesPage() {
       </div>
 
       {!loading && total > 0 ? (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Page {page} of {maxPage} • Total {total}
           </p>

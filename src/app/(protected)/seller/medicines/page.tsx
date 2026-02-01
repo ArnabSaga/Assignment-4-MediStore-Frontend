@@ -19,6 +19,43 @@ type Medicine = {
   category?: { id: string; name: string; slug: string } | null;
 };
 
+function formatMoney(amount: unknown) {
+  const n =
+    typeof amount === "number"
+      ? amount
+      : typeof amount === "string"
+        ? Number(amount)
+        : 0;
+
+  const safe = Number.isFinite(n) ? n : 0;
+
+  try {
+    return new Intl.NumberFormat("en-BD", {
+      style: "currency",
+      currency: "BDT",
+      maximumFractionDigits: 2,
+    }).format(safe);
+  } catch {
+    return `৳${safe.toFixed(2)}`;
+  }
+}
+
+function statusPill(active: boolean) {
+  return active ? (
+    <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+      Active
+    </Badge>
+  ) : (
+    <Badge variant="secondary">Inactive</Badge>
+  );
+}
+
+function clampText(v: string, left = 18, right = 8) {
+  if (!v) return "";
+  if (v.length <= left + right + 1) return v;
+  return `${v.slice(0, left)}…${v.slice(-right)}`;
+}
+
 export default function SellerMedicinesPage() {
   const [loading, setLoading] = React.useState(true);
   const [medicines, setMedicines] = React.useState<Medicine[]>([]);
@@ -123,7 +160,7 @@ export default function SellerMedicinesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Medicines</h1>
           <p className="text-sm text-muted-foreground">
@@ -131,7 +168,7 @@ export default function SellerMedicinesPage() {
           </p>
         </div>
 
-        <Button asChild className="btn-primary">
+        <Button asChild className="btn-primary w-full sm:w-auto">
           <Link href="/seller/medicines/new">+ Add Medicine</Link>
         </Button>
       </div>
@@ -150,17 +187,86 @@ export default function SellerMedicinesPage() {
             </p>
           ) : (
             <>
-              <div className="w-full overflow-x-auto">
+              {/* ✅ Mobile layout (cards) */}
+              <div className="grid gap-3 sm:hidden">
+                {pageItems.map((m) => {
+                  const busy = deletingId === m.id;
+
+                  return (
+                    <div
+                      key={m.id}
+                      className="rounded-2xl border p-4 space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{m.name}</div>
+                          <div className="text-xs text-muted-foreground font-mono">
+                            {clampText(m.slug)}
+                          </div>
+                        </div>
+                        {statusPill(m.isActive)}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="space-y-0.5">
+                          <div className="text-xs text-muted-foreground">
+                            Manufacturer
+                          </div>
+                          <div className="truncate">{m.manufacturer}</div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <div className="text-xs text-muted-foreground">
+                            Category
+                          </div>
+                          <div className="truncate">
+                            {m.category?.name ?? "—"}
+                          </div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <div className="text-xs text-muted-foreground">
+                            Price
+                          </div>
+                          <div className="font-medium">
+                            {formatMoney(m.price)}
+                          </div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <div className="text-xs text-muted-foreground">
+                            Stock
+                          </div>
+                          <div className="font-medium">{m.stock}</div>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        className="btn-outline w-full"
+                        disabled={busy}
+                        onClick={() => void handleDelete(m.id)}
+                      >
+                        {busy ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="hidden sm:block w-full overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="text-left text-muted-foreground">
                     <tr className="border-b">
-                      <th className="py-3 pr-4">Medicine</th>
-                      <th className="py-3 pr-4">Manufacturer</th>
-                      <th className="py-3 pr-4">Category</th>
-                      <th className="py-3 pr-4">Price</th>
-                      <th className="py-3 pr-4">Stock</th>
-                      <th className="py-3 pr-4">Status</th>
-                      <th className="py-3 text-right">Actions</th>
+                      <th className="py-3 pr-4 min-w-55">Medicine</th>
+                      <th className="py-3 pr-4 min-w-40">Manufacturer</th>
+                      <th className="py-3 pr-4 min-w-40">Category</th>
+                      <th className="py-3 pr-4 whitespace-nowrap">Price</th>
+                      <th className="py-3 pr-4 whitespace-nowrap">Stock</th>
+                      <th className="py-3 pr-4 whitespace-nowrap">Status</th>
+                      <th className="py-3 text-right whitespace-nowrap min-w-30">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
 
@@ -178,21 +284,15 @@ export default function SellerMedicinesPage() {
 
                         <td className="py-4 pr-4">{m.category?.name ?? "—"}</td>
 
-                        <td className="py-4 pr-4">
-                          ${Number(m.price).toFixed(2)}
+                        <td className="py-4 pr-4 whitespace-nowrap">
+                          {formatMoney(m.price)}
                         </td>
 
-                        <td className="py-4 pr-4">{m.stock}</td>
-
-                        <td className="py-4 pr-4">
-                          {m.isActive ? (
-                            <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
+                        <td className="py-4 pr-4 whitespace-nowrap">
+                          {m.stock}
                         </td>
+
+                        <td className="py-4 pr-4">{statusPill(m.isActive)}</td>
 
                         <td className="py-4 text-right">
                           <Button
@@ -210,7 +310,8 @@ export default function SellerMedicinesPage() {
                 </table>
               </div>
 
-              <div className="mt-4 flex items-center justify-between">
+              {/* Pagination */}
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   Page {page} of {maxPage} • Total {total}
                 </p>
@@ -218,7 +319,7 @@ export default function SellerMedicinesPage() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    className="btn-outline"
+                    className="btn-outline w-full sm:w-auto"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
                   >
@@ -226,7 +327,7 @@ export default function SellerMedicinesPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="btn-outline"
+                    className="btn-outline w-full sm:w-auto"
                     onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
                     disabled={page >= maxPage}
                   >

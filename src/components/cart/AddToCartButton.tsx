@@ -33,7 +33,7 @@ export function AddToCartButton(props: AddToCartButtonProps) {
   return (
     <Button
       size="lg"
-      className="w-full sm:w-auto"
+      className="btn-primary w-full sm:w-auto"
       onClick={() => {
         add({
           id: props.id,

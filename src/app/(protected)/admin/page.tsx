@@ -320,13 +320,6 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
           </div>
-
-          <p className="text-xs text-muted-foreground">
-            Note: Admin medicines listing doesn’t exist in backend. This
-            dashboard uses public{" "}
-            <span className="font-medium">GET /api/v1/medicines</span> for
-            medicine count.
-          </p>
         </>
       )}
     </main>

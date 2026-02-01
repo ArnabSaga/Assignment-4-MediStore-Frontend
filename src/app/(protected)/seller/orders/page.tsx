@@ -87,6 +87,12 @@ function formatDate(iso: string) {
   return d.toLocaleString();
 }
 
+function clampText(v: string, left = 14, right = 8) {
+  if (!v) return "";
+  if (v.length <= left + right + 1) return v;
+  return `${v.slice(0, left)}…${v.slice(-right)}`;
+}
+
 const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
   { label: "All", value: "ALL" },
   { label: "Placed", value: "PLACED" },
@@ -223,7 +229,7 @@ export default function SellerOrdersPage() {
 
   return (
     <main className="space-y-6 p-4 md:p-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Orders</h1>
           <p className="text-sm text-muted-foreground">
@@ -235,23 +241,25 @@ export default function SellerOrdersPage() {
           variant="outline"
           onClick={() => void load()}
           disabled={loading}
+          className="w-full sm:w-auto"
         >
           Refresh
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Input
           placeholder="Search by Order ID, customer name/email, status…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="md:max-w-md"
+          className="w-full lg:max-w-md"
         />
+
         <Select
           value={status}
           onValueChange={(v) => setStatus(v as OrderStatus | "ALL")}
         >
-          <SelectTrigger className="w-45">
+          <SelectTrigger className="w-full sm:w-56">
             <SelectValue placeholder="Filter status" />
           </SelectTrigger>
           <SelectContent>
@@ -265,22 +273,83 @@ export default function SellerOrdersPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
-      <div className="rounded-lg border">
+      <div className="grid gap-3 md:hidden">
+        {loading ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            Loading orders…
+          </div>
+        ) : pageItems.length === 0 ? (
+          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            No orders found.
+          </div>
+        ) : (
+          pageItems.map((o) => (
+            <div key={o.orderId} className="rounded-2xl border p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs text-muted-foreground">Order ID</div>
+                  <div className="font-semibold font-mono break-all">
+                    {clampText(o.orderId, 16, 10)}
+                  </div>
+                </div>
+
+                <Button asChild size="sm" className="shrink-0 rounded-md">
+                  <Link href={`/seller/orders/${o.orderId}`}>View</Link>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Customer</div>
+                  <div className="truncate">{o.customerName}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {o.customerEmail || "—"}
+                  </div>
+                </div>
+
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Status</div>
+                  <div className="font-medium">{o.status}</div>
+                </div>
+
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Total</div>
+                  <div className="font-medium">{formatBDT(o.total)}</div>
+                </div>
+
+                <div className="space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Items</div>
+                  <div className="font-medium">{o.itemsCount}</div>
+                </div>
+
+                <div className="col-span-2 space-y-0.5">
+                  <div className="text-xs text-muted-foreground">Created</div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(o.createdAt)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="hidden md:block rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-70">Order</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Items</TableHead>
-              <TableHead className="text-right">Created</TableHead>
-              <TableHead className="text-right">Action</TableHead>
+              <TableHead className="min-w-65">Order</TableHead>
+              <TableHead className="min-w-55">Customer</TableHead>
+              <TableHead className="min-w-35">Status</TableHead>
+              <TableHead className="text-right min-w-35">Total</TableHead>
+              <TableHead className="text-right min-w-27.5">Items</TableHead>
+              <TableHead className="text-right min-w-55">Created</TableHead>
+              <TableHead className="text-right min-w-30">Action</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -301,8 +370,10 @@ export default function SellerOrdersPage() {
               pageItems.map((o) => (
                 <TableRow key={o.orderId}>
                   <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span className="truncate">{o.orderId}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-mono truncate max-w-90">
+                        {o.orderId}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {o.status}
                       </span>
@@ -310,9 +381,11 @@ export default function SellerOrdersPage() {
                   </TableCell>
 
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="truncate">{o.customerName}</span>
-                      <span className="text-xs text-muted-foreground truncate">
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate max-w-65">
+                        {o.customerName}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate max-w-65">
                         {o.customerEmail}
                       </span>
                     </div>
@@ -320,13 +393,13 @@ export default function SellerOrdersPage() {
 
                   <TableCell>{o.status}</TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {formatBDT(o.total)}
                   </TableCell>
 
                   <TableCell className="text-right">{o.itemsCount}</TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {formatDate(o.createdAt)}
                   </TableCell>
 
@@ -342,8 +415,8 @@ export default function SellerOrdersPage() {
         </Table>
       </div>
 
-      {!loading && total > pageSize ? (
-        <div className="flex items-center justify-between">
+      {!loading && total > 0 ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Page {page} of {maxPage} • Total {total}
           </p>
@@ -353,6 +426,7 @@ export default function SellerOrdersPage() {
               variant="outline"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
+              className="w-full sm:w-auto"
             >
               Prev
             </Button>
@@ -360,6 +434,7 @@ export default function SellerOrdersPage() {
               variant="outline"
               onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
               disabled={page >= maxPage}
+              className="w-full sm:w-auto"
             >
               Next
             </Button>

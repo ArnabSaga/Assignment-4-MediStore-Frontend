@@ -257,10 +257,6 @@ export function ProfileForm({ initialMe }: { initialMe: MeUser }) {
             <Separator className="my-5" />
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground">
-                User ID: <span className="font-mono">{me.id}</span>
-              </p>
-
               <Button
                 variant="outline"
                 className={cn("btn-outline", "sm:w-auto")}
