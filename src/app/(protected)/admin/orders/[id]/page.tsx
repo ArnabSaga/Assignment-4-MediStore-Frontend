@@ -32,14 +32,14 @@ type OrderStatus =
 type OrderItem = {
   id: string;
   quantity: number;
-  price: number;
+  price: number | string;
   medicine?: { id: string; name: string } | null;
 };
 
 type OrderDetails = {
   id: string;
   status: OrderStatus;
-  totalAmount: number;
+  totalAmount: number | string;
   createdAt: string;
   updatedAt: string;
   customer?: { id: string; name?: string | null; email?: string | null } | null;
@@ -47,6 +47,12 @@ type OrderDetails = {
 };
 
 type ApiResponse<T> = { success: boolean; message?: string; data?: T };
+type ApiListResponse<T> = {
+  success: boolean;
+  message?: string;
+  meta?: { page?: number; limit?: number; total?: number };
+  data?: T;
+};
 
 const STATUS_OPTIONS: OrderStatus[] = [
   "PLACED",
@@ -56,15 +62,25 @@ const STATUS_OPTIONS: OrderStatus[] = [
   "CANCELLED",
 ];
 
-function formatBDT(amount: number) {
+function toNumber(v: unknown): number {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function formatBDT(amount: unknown) {
+  const n = toNumber(amount);
   try {
     return new Intl.NumberFormat("en-BD", {
       style: "currency",
       currency: "BDT",
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(n);
   } catch {
-    return `৳${Math.round(amount)}`;
+    return `৳${Math.round(n)}`;
   }
 }
 
@@ -74,33 +90,49 @@ function formatDate(iso: string) {
   return d.toLocaleString();
 }
 
-async function readJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
+async function readAdminOrders(): Promise<OrderDetails[]> {
+  const res = await fetch(`/api/v1/admin/orders?limit=800&page=1`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
+  const json = (await res.json().catch(() => null)) as ApiListResponse<
+    OrderDetails[]
+  > | null;
+
+  if (!res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
+  }
+  if (!json?.success) {
+    throw new Error(json?.message || "Failed to load orders");
+  }
+
+  return Array.isArray(json.data) ? json.data : [];
 }
 
-async function putJSON<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "PUT",
+async function patchAdminOrderStatus(id: string, status: OrderStatus) {
+  const res = await fetch(`/api/v1/admin/orders/${id}`, {
+    method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ status }),
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
+  const json = (await res
+    .json()
+    .catch(() => null)) as ApiResponse<OrderDetails> | null;
+
+  if (!res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
+  }
+  if (!json?.success || !json.data) {
+    throw new Error(json?.message || "Failed to update order");
+  }
+
+  return json.data;
 }
 
 export default function AdminOrderDetailsPage() {
@@ -124,18 +156,16 @@ export default function AdminOrderDetailsPage() {
     setSuccess(null);
 
     try {
-      const res = await readJSON<ApiResponse<OrderDetails>>(
-        `/api/v1/admin/orders/${id}`
-      );
+      const list = await readAdminOrders();
+      const found = list.find((o) => o.id === id);
 
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to load order");
-      }
+      if (!found) throw new Error("Order not found.");
 
-      setOrder(res.data);
-      setStatus(res.data.status);
+      setOrder(found);
+      setStatus(found.status);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load order");
+      setOrder(null);
     } finally {
       setLoading(false);
     }
@@ -153,24 +183,10 @@ export default function AdminOrderDetailsPage() {
     setSuccess(null);
 
     try {
-      try {
-        const r1 = await putJSON<ApiResponse<OrderDetails>>(
-          `/api/v1/admin/orders/${order.id}/status`,
-          { status }
-        );
-        if (!r1.success || !r1.data) throw new Error(r1.message || "Failed");
-        setOrder(r1.data);
-        setSuccess("Order status updated.");
-        return;
-      } catch (e1: any) {
-        const r2 = await putJSON<ApiResponse<OrderDetails>>(
-          `/api/v1/admin/orders/${order.id}`,
-          { status }
-        );
-        if (!r2.success || !r2.data) throw new Error(r2.message || "Failed");
-        setOrder(r2.data);
-        setSuccess("Order status updated.");
-      }
+      const updated = await patchAdminOrderStatus(order.id, status);
+      setOrder(updated);
+      setStatus(updated.status);
+      setSuccess("Order status updated.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update status");
     } finally {
@@ -222,7 +238,6 @@ export default function AdminOrderDetailsPage() {
         <div className="rounded-lg border p-6">Order not found.</div>
       ) : (
         <>
-          {/* Summary */}
           <Card>
             <CardHeader>
               <CardTitle>Summary</CardTitle>
@@ -291,7 +306,6 @@ export default function AdminOrderDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Items */}
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
@@ -312,8 +326,7 @@ export default function AdminOrderDetailsPage() {
                   </TableRow>
                 ) : (
                   (order.items ?? []).map((it) => {
-                    const subtotal =
-                      Number(it.price || 0) * Number(it.quantity || 0);
+                    const subtotal = toNumber(it.price) * toNumber(it.quantity);
                     return (
                       <TableRow key={it.id}>
                         <TableCell className="font-medium">

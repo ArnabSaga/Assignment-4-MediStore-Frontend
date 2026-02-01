@@ -31,7 +31,7 @@ type OrderStatus =
 type OrderListItem = {
   id: string;
   status: OrderStatus;
-  totalAmount: number;
+  totalAmount: number | string;
   createdAt: string;
   updatedAt: string;
   customer?: {
@@ -40,6 +40,12 @@ type OrderListItem = {
     email?: string | null;
   } | null;
   _count?: { items?: number };
+  items?: Array<{
+    id: string;
+    quantity: number;
+    price: number | string;
+    medicine?: { id: string; name: string } | null;
+  }>;
 };
 
 type ApiListResponse<T> = {
@@ -49,15 +55,25 @@ type ApiListResponse<T> = {
   data?: T;
 };
 
-function formatBDT(amount: number) {
+function toNumber(v: unknown): number {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function formatBDT(amount: unknown) {
+  const n = toNumber(amount);
   try {
     return new Intl.NumberFormat("en-BD", {
       style: "currency",
       currency: "BDT",
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(n);
   } catch {
-    return `৳${Math.round(amount)}`;
+    return `৳${Math.round(n)}`;
   }
 }
 
@@ -77,7 +93,6 @@ const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
 ];
 
 async function fetchAdminOrders(opts: {
-  q?: string;
   status?: OrderStatus | "ALL";
   page?: number;
   limit?: number;
@@ -85,7 +100,6 @@ async function fetchAdminOrders(opts: {
   const params = new URLSearchParams();
   params.set("page", String(opts.page ?? 1));
   params.set("limit", String(opts.limit ?? 20));
-  if (opts.q?.trim()) params.set("q", opts.q.trim());
   if (opts.status && opts.status !== "ALL") params.set("status", opts.status);
 
   const res = await fetch(`/api/v1/admin/orders?${params.toString()}`, {
@@ -102,7 +116,6 @@ async function fetchAdminOrders(opts: {
   if (!res.ok) {
     throw new Error(json?.message || `Failed to load orders (${res.status})`);
   }
-
   if (!json?.success) {
     throw new Error(json?.message || "Failed to load orders");
   }
@@ -128,9 +141,27 @@ export default function AdminOrdersPage() {
     setError(null);
 
     try {
-      const res = await fetchAdminOrders({ q, status, page, limit });
-      setOrders(res.data ?? []);
-      setTotal(res.meta?.total ?? 0);
+      const res = await fetchAdminOrders({ status, page, limit });
+      const list = res.data ?? [];
+
+      const query = q.trim().toLowerCase();
+      const filtered = !query
+        ? list
+        : list.filter((o) => {
+            const hay = [
+              o.id,
+              o.customer?.name ?? "",
+              o.customer?.email ?? "",
+              o.status,
+              ...(o.items ?? []).map((it) => it?.medicine?.name ?? ""),
+            ]
+              .join(" ")
+              .toLowerCase();
+            return hay.includes(query);
+          });
+
+      setOrders(filtered);
+      setTotal(res.meta?.total ?? filtered.length);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load orders");
     } finally {
@@ -173,7 +204,7 @@ export default function AdminOrdersPage() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by order id, customer name/email…"
+          placeholder="Search by order id, customer, medicine…"
           className="md:max-w-md"
         />
 
@@ -181,7 +212,7 @@ export default function AdminOrdersPage() {
           value={status}
           onValueChange={(v) => setStatus(v as OrderStatus | "ALL")}
         >
-          <SelectTrigger className="w-50">
+          <SelectTrigger className="w-52">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -198,7 +229,7 @@ export default function AdminOrdersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-65">Order</TableHead>
+              <TableHead className="w-72">Order</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
@@ -251,7 +282,7 @@ export default function AdminOrdersPage() {
                   </TableCell>
 
                   <TableCell className="text-right">
-                    {o._count?.items ?? "-"}
+                    {o._count?.items ?? o.items?.length ?? "-"}
                   </TableCell>
 
                   <TableCell className="text-right">
