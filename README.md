@@ -6,21 +6,6 @@ MediStore Frontend is a responsive, production-ready **Next.js (App Router)** ap
 It supports authentication, product browsing, cart & checkout, seller dashboards, admin management, and order tracking.
 
 ---
-
-## 🔐 Demo Accounts (For Testing)
-
-### 🎯 Admin
-- **Email:** `espresso@admin.com`
-- **Password:** `12345678#$%ADiMn`
-
-### 🏪 Seller
-- **Email:** `arnab@gmail.com`
-- **Password:** `arnab@gmail.com`
-
-### 🧑 Customer
-- **Email:** `arnab1@gmail.com`
-- **Password:** `arnab1@gmail.com`
-
 > ⚠️ Demo credentials are for development/testing only.
 
 ---
@@ -72,7 +57,10 @@ src/
 ├─ hooks/          # Custom React hooks
 ├─ providers/      # Global context providers
 ├─ store/          # Global state (cart, session, etc.)
-🔄 Typical Request Flow
+
+```
+### 🔄 Typical Request Flow
+
 User interacts with UI components
 
 Component calls a helper from client-api.ts or server-api.ts
@@ -86,7 +74,8 @@ Errors are handled centrally
 🔌 API Expectations
 The frontend expects a RESTful backend API.
 
-Authentication
+#### Authentication
+```
 POST /auth/login
 
 POST /auth/register
@@ -94,30 +83,34 @@ POST /auth/register
 POST /auth/forgot-password
 
 POST /auth/verify-email
-
-Products & Catalog
+```
+#### Products & Catalog
+```
 GET /products
 
 GET /products/:id
 
 GET /categories
-
-Cart & Orders
+```
+#### Cart & Orders
+```
 POST /orders
 
 GET /orders/:id
-
-Seller & Admin
+```
+#### Seller & Admin
+```
 GET /users (admin)
 
 PATCH /users/:id
 
 GET /seller/orders
+```
 
 🔧 Endpoint paths and headers should match your backend implementation.
 Base URL is configured via env.ts / proxy.ts.
 
-✨ Features
+#### ✨ Features
 Authentication (login, register, verification)
 
 Product browsing with filters
@@ -130,7 +123,8 @@ Admin panel (users, categories, orders)
 
 Responsive & accessible UI
 
-🚀 Getting Started
+#### 🚀 Getting Started
+```
 1️⃣ Clone the Repository
 git clone <frontend-repo-url>
 cd medi-store-frontend
@@ -145,11 +139,12 @@ pnpm dev
 5️⃣ Build for Production
 pnpm build
 pnpm start
-🌐 Live Demo
+``` 
+#### 🌐 Live Demo
 👉 medi-store-frontend-puce.vercel.app
 (Replace with your deployed URL)
 
-🧭 Future Improvements
+#### 🧭 Future Improvements
 End-to-end tests (Playwright / Cypress)
 
 CI/CD pipelines
