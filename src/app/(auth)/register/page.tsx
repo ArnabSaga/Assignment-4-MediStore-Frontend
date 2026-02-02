@@ -1,11 +1,12 @@
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import RegisterClient from '@/components/auth/RegisterClient';
 
-import { RegisterForm } from "@/components/auth/register-form";
 
 export default function RegisterPage() {
   return (
-    <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-2 overflow-hidden">
+    <div className="grid min-h-dvh grid-cols-1 overflow-hidden lg:grid-cols-2">
       <div className="flex flex-col px-6 py-8 md:px-10">
         <div className="flex items-center justify-center lg:justify-start">
           <Link href="/" className="group inline-flex items-center gap-3">
@@ -41,7 +42,21 @@ export default function RegisterPage() {
 
         <div className="mt-8 flex flex-1 items-center justify-center lg:mt-0">
           <div className="w-full max-w-md">
-            <RegisterForm />
+            <React.Suspense
+              fallback={
+                <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+                  <div className="h-6 w-56 animate-pulse rounded bg-muted" />
+                  <div className="mt-3 h-4 w-72 animate-pulse rounded bg-muted" />
+                  <div className="mt-6 h-10 w-full animate-pulse rounded bg-muted" />
+                  <div className="mt-3 h-10 w-full animate-pulse rounded bg-muted" />
+                  <div className="mt-3 h-10 w-full animate-pulse rounded bg-muted" />
+                  <div className="mt-3 h-10 w-full animate-pulse rounded bg-muted" />
+                  <div className="mt-6 h-10 w-full animate-pulse rounded bg-muted" />
+                </div>
+              }
+            >
+              <RegisterClient />
+            </React.Suspense>
           </div>
         </div>
 
@@ -50,7 +65,7 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      <div className="relative hidden lg:block overflow-hidden">
+      <div className="relative hidden overflow-hidden lg:block">
         <Image
           src="/images/hero-section-image.jpg"
           alt="MediStore"

@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = localFont({
-  src: "./fonts/InterVf.ttf",
+  src: "./fonts/InterVF.ttf",
   variable: "--font-inter",
   weight: "100 200 300 400 500 600 700 800 900",
 });

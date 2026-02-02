@@ -30,7 +30,7 @@ type ApiResponse<T> = {
   data?: T;
 };
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+const BACKEND_URL = process.env.BACKEND_URL;
 
 type BetterAuthSessionResult =
   | { data: { user: any; session: any } | null; error: null }

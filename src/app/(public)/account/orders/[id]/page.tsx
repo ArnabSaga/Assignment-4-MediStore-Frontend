@@ -45,10 +45,9 @@ type Order = {
   items: OrderItem[];
 };
 
-const API_BASE = env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+const API_BASE = "/api/v1";
 
 function orderRef(id: string) {
-  // Customer-friendly order ref, keep UUID hidden
   const short = id.replace(/-/g, "").slice(-6).toUpperCase();
   return `MS-${short}`;
 }
@@ -347,8 +346,6 @@ export default function AccountOrderDetailsPage() {
                     </span>
                   </div>
                 </div>
-
-                {/* ✅ Removed Created At / Updated At */}
 
                 <Button
                   variant="destructive"

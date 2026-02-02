@@ -65,7 +65,7 @@ const STATUSES: Array<"ALL" | OrderStatus> = [
   "CANCELLED",
 ];
 
-const API_BASE = env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+const API_BASE = "/api/v1";
 
 function asNumber(v: unknown): number {
   if (typeof v === "number") return v;

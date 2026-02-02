@@ -13,6 +13,11 @@ export type AppSessionUser = {
   role?: Role;
 };
 
+type AnySessionResponse = {
+  user?: AppSessionUser | null;
+  data?: { user?: AppSessionUser | null } | null;
+} | null;
+
 export function useSession() {
   const [loading, setLoading] = React.useState(true);
   const [user, setUser] = React.useState<AppSessionUser | null>(null);
@@ -20,8 +25,11 @@ export function useSession() {
   const refresh = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await authClient.getSession();
-      const u = (res?.data?.user as AppSessionUser | undefined) ?? null;
+      const res = (await authClient
+        .getSession()
+        .catch(() => null)) as AnySessionResponse;
+
+      const u = (res?.user ?? res?.data?.user ?? null) as AppSessionUser | null;
       setUser(u);
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const BACKEND_URL = process.env.BACKEND_URL;
 
 type OrderStatus =
   | "PLACED"
@@ -108,13 +106,20 @@ async function backendFetch<T>(path: string): Promise<T> {
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const res = await fetch(`${BACKEND_URL}${path}`, {
+  // ✅ Build origin dynamically (works on localhost + Vercel)
+  const h = await headers();
+  const host = h.get("host"); // localhost:3000 or your-domain.vercel.app
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const origin = `${proto}://${host}`;
+
+  // ✅ Call Next proxy (same-origin), not BACKEND_URL
+  const res = await fetch(`${origin}${path}`, {
     method: "GET",
     headers: {
-      "Content-Type": "application/json",
-      Cookie: cookieHeader,
+      "content-type": "application/json",
+      cookie: cookieHeader,
     },
-    next: { revalidate: 0 },
+    cache: "no-store",
   });
 
   const text = await res.text().catch(() => "");

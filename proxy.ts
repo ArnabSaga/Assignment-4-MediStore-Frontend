@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { env } from "@/env";
 
 type Role = "CUSTOMER" | "SELLER" | "ADMIN";
 
@@ -23,14 +24,14 @@ async function getRole(req: NextRequest): Promise<Role | null> {
   try {
     const cookie = req.headers.get("cookie") ?? "";
 
-    const backend = process.env.BACKEND_URL;
-    const sessionUrl = new URL(SESSION_PATH, backend);
+    const sessionUrl = new URL(SESSION_PATH, env.BACKEND_URL);
 
-    const res = await fetch(sessionUrl, {
+    const res = await fetch(sessionUrl.toString(), {
       method: "GET",
       headers: {
         cookie,
         "content-type": "application/json",
+        origin: req.nextUrl.origin,
       },
       cache: "no-store",
     });
@@ -65,7 +66,9 @@ export async function proxy(req: NextRequest) {
 
   const role = await getRole(req);
 
-  if (!role) return redirectToLogin(req);
+  if (!role) {
+    return redirectToLogin(req);
+  }
 
   if (pathname.startsWith("/admin")) {
     if (role !== "ADMIN") {

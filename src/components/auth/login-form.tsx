@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import * as z from "zod";
 
 import { useForm } from "@tanstack/react-form";
@@ -27,13 +27,12 @@ const formSchema = z.object({
   password: z.string().min(8, "Minimum length is 8"),
 });
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentProps<"form">) {
+type LoginFormProps = React.ComponentProps<"form"> & {
+  next?: string;
+};
+
+export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/";
 
   const [pending, setPending] = React.useState(false);
   const [notVerifiedEmail, setNotVerifiedEmail] = React.useState<string | null>(
@@ -77,8 +76,9 @@ export function LoginForm({
         }
 
         toast.success("Welcome back to MediStore 💊", { id: toastId });
-        router.refresh();
-        router.push(next);
+
+        // ✅ IMPORTANT: hard redirect so cookie/session is guaranteed to load
+        window.location.href = next;
       } catch {
         toast.error("Something went wrong, please try again.", { id: toastId });
       } finally {
@@ -109,6 +109,7 @@ export function LoginForm({
 
     setResendPending(true);
     const t = toast.loading("Sending verification email…");
+
     try {
       await resendVerificationEmail(notVerifiedEmail, next);
       toast.success("Verification email sent. Please check your inbox.", {
@@ -148,6 +149,7 @@ export function LoginForm({
             <p className="text-muted-foreground">
               We blocked login because your email isn’t verified.
             </p>
+
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Button
                 type="button"
@@ -158,6 +160,7 @@ export function LoginForm({
               >
                 {resendPending ? "Sending…" : "Resend verification email"}
               </Button>
+
               <Button asChild type="button" variant="ghost">
                 <Link
                   href={`/check-email?email=${encodeURIComponent(

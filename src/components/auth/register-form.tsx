@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import * as z from "zod";
 
 import { useForm } from "@tanstack/react-form";
@@ -34,13 +34,16 @@ const formSchema = z
     path: ["confirmPassword"],
   });
 
+type RegisterFormProps = React.ComponentProps<"form"> & {
+  next?: string;
+};
+
 export function RegisterForm({
   className,
+  next = "/",
   ...props
-}: React.ComponentProps<"form">) {
+}: RegisterFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/";
 
   const [pending, setPending] = React.useState(false);
 
@@ -72,9 +75,9 @@ export function RegisterForm({
 
         router.refresh();
         router.push(
-          `/check-email?email=${encodeURIComponent(payload.email)}&next=${encodeURIComponent(
-            next
-          )}`
+          `/check-email?email=${encodeURIComponent(
+            payload.email
+          )}&next=${encodeURIComponent(next)}`
         );
 
         form.reset();

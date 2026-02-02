@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Truck } from "lucide-react";
 
-import { env } from "@/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -20,7 +19,7 @@ type ApiResponse<T> = {
   data?: T;
 };
 
-const API_BASE = env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+const API_BASE = "/api/v1";
 
 function moneyBDT(value: number) {
   return `৳${Math.round(value)}`;
@@ -34,6 +33,11 @@ function readApiError(json: any, fallback: string) {
   return fallback;
 }
 
+function isValidPhone(phone: string) {
+  const p = phone.replace(/\s+/g, "");
+  return p.length >= 10;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
 
@@ -42,6 +46,7 @@ export default function CheckoutPage() {
   const clear = useCartStore((s) => s.clear);
 
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
@@ -73,24 +78,45 @@ export default function CheckoutPage() {
   const placeOrder = async () => {
     if (loading) return;
 
-    if (!name.trim() || !phone.trim() || !address.trim()) {
-      alert("Please fill all delivery details.");
+    setError(null);
+
+    const n = name.trim();
+    const p = phone.trim();
+    const a = address.trim();
+
+    if (!n || !p || !a) {
+      setError("Please fill in your name, phone number, and delivery address.");
       return;
     }
 
-    const shippingAddress = `Name: ${name.trim()}\nPhone: ${phone.trim()}\nAddress: ${address.trim()}`;
+    if (!isValidPhone(p)) {
+      setError("Please enter a valid phone number.");
+      return;
+    }
+
+    const shippingAddress = `Name: ${n}\nPhone: ${p}\nAddress: ${a}`;
 
     const payload = {
       shippingAddress,
       items: items.map((i) => ({
         medicineId: i.id,
-        quantity: i.qty, 
+        quantity: i.qty,
       })),
     };
 
     try {
       setLoading(true);
 
+      const sessionRes = await fetch("/api/auth/get-session", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!sessionRes.ok) {
+        router.push(`/login?next=${encodeURIComponent("/checkout")}`);
+        return;
+      }
       const res = await fetch(`${API_BASE}/orders`, {
         method: "POST",
         credentials: "include",
@@ -108,14 +134,14 @@ export default function CheckoutPage() {
       }
 
       if (!res.ok || !json?.success || !json.data?.id) {
-        throw new Error(readApiError(json, "Order failed"));
+        throw new Error(readApiError(json, "Order failed. Please try again."));
       }
 
       clear();
       router.push(`/account/orders/${json.data.id}`);
     } catch (e: any) {
       console.error(e);
-      alert(e?.message || "Order failed. Please try again.");
+      setError(e?.message || "Order failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -132,6 +158,12 @@ export default function CheckoutPage() {
         </div>
 
         <Separator className="my-6" />
+
+        {error && (
+          <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm">
+            {error}
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
