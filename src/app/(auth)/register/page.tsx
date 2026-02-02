@@ -6,9 +6,7 @@ import { RegisterForm } from "@/components/auth/register-form";
 export default function RegisterPage() {
   return (
     <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-2 overflow-hidden">
-      {/* LEFT */}
       <div className="flex flex-col px-6 py-8 md:px-10">
-        {/* Brand */}
         <div className="flex items-center justify-center lg:justify-start">
           <Link href="/" className="group inline-flex items-center gap-3">
             <span className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-xl border border-border bg-card">
@@ -28,7 +26,6 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        {/* Mobile banner */}
         <div className="relative mt-6 overflow-hidden rounded-2xl border border-border bg-muted lg:hidden">
           <div className="relative aspect-video w-full">
             <Image
@@ -42,7 +39,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Form */}
         <div className="mt-8 flex flex-1 items-center justify-center lg:mt-0">
           <div className="w-full max-w-md">
             <RegisterForm />
@@ -54,7 +50,6 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      {/* RIGHT (Desktop image) */}
       <div className="relative hidden lg:block overflow-hidden">
         <Image
           src="/images/hero-section-image.jpg"

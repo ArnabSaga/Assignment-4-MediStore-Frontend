@@ -50,7 +50,7 @@ export function RegisterForm({
       email: "",
       password: "",
       confirmPassword: "",
-      role: "CUSTOMER",
+      role: "CUSTOMER" as "CUSTOMER" | "SELLER",
     },
     validators: {
       onSubmit: formSchema,
@@ -61,7 +61,6 @@ export function RegisterForm({
 
       try {
         const { confirmPassword, ...payload } = value;
-
         const { error } = await authClient.signUp.email(payload);
 
         if (error) {
@@ -72,7 +71,11 @@ export function RegisterForm({
         toast.success("Account created successfully 🎉", { id: toastId });
 
         router.refresh();
-        router.push(next);
+        router.push(
+          `/check-email?email=${encodeURIComponent(payload.email)}&next=${encodeURIComponent(
+            next
+          )}`
+        );
 
         form.reset();
       } catch {
@@ -82,6 +85,23 @@ export function RegisterForm({
       }
     },
   });
+
+  const handleGoogle = async () => {
+    if (pending) return;
+    setPending(true);
+
+    try {
+      const callbackURL = new URL(next, window.location.origin).toString();
+
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL,
+      });
+    } catch {
+      toast.error("Google sign-in failed. Please try again.");
+      setPending(false);
+    }
+  };
 
   return (
     <form
@@ -116,8 +136,11 @@ export function RegisterForm({
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder="John Doe"
                   required
+                  disabled={pending}
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid ? (
+                  <FieldError errors={field.state.meta.errors} />
+                ) : null}
               </Field>
             );
           }}
@@ -138,8 +161,11 @@ export function RegisterForm({
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder="you@example.com"
                   required
+                  disabled={pending}
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid ? (
+                  <FieldError errors={field.state.meta.errors} />
+                ) : null}
                 <FieldDescription>
                   We’ll only use this to contact you.
                 </FieldDescription>
@@ -158,6 +184,7 @@ export function RegisterForm({
                 onChange={(e) =>
                   field.handleChange(e.target.value as "CUSTOMER" | "SELLER")
                 }
+                disabled={pending}
               >
                 <option value="CUSTOMER">Customer (Buy medicines)</option>
                 <option value="SELLER">Seller (Sell medicines)</option>
@@ -184,8 +211,11 @@ export function RegisterForm({
                   onChange={(e) => field.handleChange(e.target.value)}
                   autoComplete="new-password"
                   required
+                  disabled={pending}
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid ? (
+                  <FieldError errors={field.state.meta.errors} />
+                ) : null}
               </Field>
             );
           }}
@@ -206,8 +236,11 @@ export function RegisterForm({
                   onChange={(e) => field.handleChange(e.target.value)}
                   autoComplete="new-password"
                   required
+                  disabled={pending}
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid ? (
+                  <FieldError errors={field.state.meta.errors} />
+                ) : null}
               </Field>
             );
           }}
@@ -220,13 +253,22 @@ export function RegisterForm({
         <FieldSeparator>Or</FieldSeparator>
 
         <Field>
-          <Button variant="outline" className="w-full" type="button">
+          <Button
+            variant="outline"
+            className="w-full"
+            type="button"
+            onClick={handleGoogle}
+            disabled={pending}
+          >
             Continue with Google
           </Button>
 
           <FieldDescription className="mt-3 text-center">
             Already have an account?{" "}
-            <Link href="/login" className="underline underline-offset-4">
+            <Link
+              href={`/login?next=${encodeURIComponent(next)}`}
+              className="underline underline-offset-4"
+            >
               Login
             </Link>
           </FieldDescription>
