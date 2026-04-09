@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
-import type { ApiResponse } from "@/types/api";
 import { apiUrl } from "@/lib/url";
+import type { ApiResponse } from "@/types/api";
+import { cookies, headers } from "next/headers";
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -16,19 +16,40 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Enhanced server API helper for Next.js Server Components and Server Actions.
+ * It automatically forwards cookies and other essential headers to the API.
+ */
 export async function serverApi<T>(
   path: string,
   opts: { method?: Method; body?: unknown; cache?: RequestCache } = {}
 ): Promise<T> {
   const cookieStore = await cookies();
-  const cookie = cookieStore.toString(); 
+  const incomingHeaders = await headers();
+
+  // Forward curated headers for SSR transport sync
+  const forwardedHeaders: Record<string, string> = {
+    "content-type": "application/json",
+    cookie: cookieStore.toString(),
+  };
+
+  // Forward optional debugging/security headers if they exist
+  const headerList = [
+    "user-agent",
+    "x-forwarded-for",
+    "x-forwarded-host",
+    "x-forwarded-proto",
+    "accept-language",
+  ];
+
+  for (const h of headerList) {
+    const val = incomingHeaders.get(h);
+    if (val) forwardedHeaders[h] = val;
+  }
 
   const res = await fetch(apiUrl(path), {
     method: opts.method ?? "GET",
-    headers: {
-      "content-type": "application/json",
-      cookie,
-    },
+    headers: forwardedHeaders,
     credentials: "include",
     cache: opts.cache ?? "no-store",
     body: opts.body ? JSON.stringify(opts.body) : undefined,

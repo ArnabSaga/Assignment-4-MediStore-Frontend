@@ -1,25 +1,20 @@
 "use client";
 
-import * as React from "react";
+import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
-import { useForm } from "@tanstack/react-form";
+import * as React from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { clientApi } from "@/lib/client-api";
+import { uploadImage } from "@/lib/upload";
 import { cn } from "@/lib/utils";
-
-type Category = { id: string; name: string; slug: string };
+import { Category } from "@/types/api";
+import { Input } from "../ui/input";
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -35,6 +30,29 @@ const schema = z.object({
 export function CreateMedicineForm({ categories }: { categories: Category[] }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onChange: (v: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const t = toast.loading("Uploading image...");
+
+    try {
+      const { url } = await uploadImage(file);
+      onChange(url);
+      toast.success("Image uploaded 📸", { id: t });
+    } catch (err) {
+      console.error(err);
+      toast.error("Upload failed", { id: t });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const form = useForm({
     defaultValues: {
@@ -67,28 +85,15 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
           categoryId: parsed.data.categoryId,
           price: Number(parsed.data.price),
           stock: Number(parsed.data.stock),
-          imageUrl: parsed.data.imageUrl?.trim()
-            ? parsed.data.imageUrl.trim()
-            : undefined,
-          description: parsed.data.description?.trim()
-            ? parsed.data.description.trim()
-            : undefined,
+          imageUrl: parsed.data.imageUrl?.trim() ? parsed.data.imageUrl.trim() : undefined,
+          description: parsed.data.description?.trim() ? parsed.data.description.trim() : undefined,
           isActive: Boolean(parsed.data.isActive ?? true),
         };
 
-        const res = await fetch(`/api/v1/seller/medicines`, {
+        await clientApi("/seller/medicines", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(payload),
+          body: payload,
         });
-
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          console.log("CREATE MEDICINE FAILED:", res.status, text);
-          toast.error("Create failed", { id: t });
-          return;
-        }
 
         toast.success("Medicine created ✅", { id: t });
         router.push("/seller/medicines");
@@ -106,12 +111,8 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            New Medicine
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Add a new medicine to your store.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">New Medicine</h1>
+          <p className="text-sm text-muted-foreground">Add a new medicine to your store.</p>
         </div>
 
         <Button asChild variant="outline" className="btn-outline">
@@ -135,8 +136,7 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
             <FieldGroup>
               <form.Field name="name">
                 {(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                   return (
                     <Field>
                       <FieldLabel>Name</FieldLabel>
@@ -146,9 +146,7 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
                         onBlur={field.handleBlur}
                         placeholder="Napa 500mg"
                       />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
+                      {isInvalid && <FieldError errors={field.state.meta.errors} />}
                     </Field>
                   );
                 }}
@@ -156,8 +154,7 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
 
               <form.Field name="manufacturer">
                 {(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                   return (
                     <Field>
                       <FieldLabel>Manufacturer</FieldLabel>
@@ -167,9 +164,7 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
                         onBlur={field.handleBlur}
                         placeholder="Square Pharmaceuticals"
                       />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
+                      {isInvalid && <FieldError errors={field.state.meta.errors} />}
                     </Field>
                   );
                 }}
@@ -190,9 +185,7 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
                         </option>
                       ))}
                     </select>
-                    <FieldDescription>
-                      Select the correct category.
-                    </FieldDescription>
+                    <FieldDescription>Select the correct category.</FieldDescription>
                   </Field>
                 )}
               </form.Field>
@@ -200,24 +193,19 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <form.Field name="price">
                   {(field) => {
-                    const isInvalid =
-                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                     return (
                       <Field>
                         <FieldLabel>Price</FieldLabel>
                         <Input
                           type="number"
                           value={String(field.state.value)}
-                          onChange={(e) =>
-                            field.handleChange(Number(e.target.value))
-                          }
+                          onChange={(e) => field.handleChange(Number(e.target.value))}
                           onBlur={field.handleBlur}
                           min={1}
                           step="0.01"
                         />
-                        {isInvalid && (
-                          <FieldError errors={field.state.meta.errors} />
-                        )}
+                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
                       </Field>
                     );
                   }}
@@ -225,24 +213,19 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
 
                 <form.Field name="stock">
                   {(field) => {
-                    const isInvalid =
-                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                     return (
                       <Field>
                         <FieldLabel>Stock</FieldLabel>
                         <Input
                           type="number"
                           value={String(field.state.value)}
-                          onChange={(e) =>
-                            field.handleChange(Number(e.target.value))
-                          }
+                          onChange={(e) => field.handleChange(Number(e.target.value))}
                           onBlur={field.handleBlur}
                           min={0}
                           step={1}
                         />
-                        {isInvalid && (
-                          <FieldError errors={field.state.meta.errors} />
-                        )}
+                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
                       </Field>
                     );
                   }}
@@ -250,24 +233,65 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
               </div>
 
               <form.Field name="imageUrl">
-                {(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field>
-                      <FieldLabel>Image URL (optional)</FieldLabel>
+                {(field) => (
+                  <Field>
+                    <FieldLabel>Medicine Image</FieldLabel>
+                    <div className="flex flex-col gap-3">
+                      {field.state.value && (
+                        <div className="relative h-40 w-full overflow-hidden rounded-md border border-border bg-muted">
+                          <img
+                            src={field.state.value}
+                            alt="Preview"
+                            className="h-full w-full object-contain"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute right-2 top-2 h-8 w-8"
+                            onClick={() => field.handleChange("")}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="image-upload"
+                          onChange={(e) => handleFileUpload(e, field.handleChange)}
+                          disabled={uploading || pending}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full border-dashed"
+                          onClick={() => document.getElementById("image-upload")?.click()}
+                          disabled={uploading || pending}
+                        >
+                          {uploading ? "Uploading..." : "Upload Image"}
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="h-px flex-1 bg-border" />
+                        <span>OR</span>
+                        <span className="h-px flex-1 bg-border" />
+                      </div>
+
                       <Input
                         value={field.state.value ?? ""}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        placeholder="https://..."
+                        placeholder="Paste image URL here..."
+                        disabled={uploading || pending}
                       />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
+                    </div>
+                  </Field>
+                )}
               </form.Field>
 
               <form.Field name="description">
@@ -307,11 +331,7 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
             </FieldGroup>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="submit"
-                className="btn-primary w-full sm:w-auto"
-                disabled={pending}
-              >
+              <Button type="submit" className="btn-primary w-full sm:w-auto" disabled={pending}>
                 {pending ? "Creating..." : "Create Medicine"}
               </Button>
               <Button

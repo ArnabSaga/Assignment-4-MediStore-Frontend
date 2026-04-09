@@ -11,26 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
-type Role = "CUSTOMER" | "SELLER" | "ADMIN";
-
-type SessionUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  image?: string | null;
-  phone?: string | null;
-  emailVerified?: boolean;
-  isBanned?: boolean;
-};
-
-type ApiResponse<T> = {
-  success: boolean;
-  message?: string;
-  data?: T;
-};
-
-const BACKEND_URL = process.env.BACKEND_URL;
+import { clientApi } from "@/lib/client-api";
+import type { CurrentUser as SessionUser, ApiResponse } from "@/types/api";
+import { Role } from '@/hooks/use-session';
 
 type BetterAuthSessionResult =
   | { data: { user: any; session: any } | null; error: null }
@@ -67,27 +50,10 @@ async function updateMe(payload: {
   phone?: string | null;
   image?: string | null;
 }): Promise<SessionUser> {
-  const res = await fetch(`${BACKEND_URL}/api/v1/users/me`, {
+  return clientApi<SessionUser>("/users/me", {
     method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: payload,
   });
-
-  const json = (await res
-    .json()
-    .catch(() => null)) as ApiResponse<SessionUser> | null;
-
-  if (!res.ok) {
-    throw new Error(
-      json?.message || `Failed to update profile (${res.status})`
-    );
-  }
-  if (!json?.success || !json.data) {
-    throw new Error(json?.message || "Failed to update profile");
-  }
-
-  return json.data;
 }
 
 export default function SellerProfilePage() {

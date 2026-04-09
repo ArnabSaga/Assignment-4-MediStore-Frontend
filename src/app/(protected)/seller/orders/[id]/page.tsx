@@ -1,11 +1,10 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -13,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -22,12 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type OrderStatus =
-  | "PLACED"
-  | "PROCESSING"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+import { clientApi } from "@/lib/client-api";
+import type { OrderStatus } from "@/types/api";
 
 type SellerOrderItemApi = {
   id: string;
@@ -37,7 +33,7 @@ type SellerOrderItemApi = {
   medicine?: {
     id: string;
     name: string;
-    image?: string | null;
+    imageUrl?: string | null;
   } | null;
   order: {
     id: string;
@@ -61,7 +57,7 @@ type OrderItem = {
   medicine?: {
     id: string;
     name: string;
-    image?: string | null;
+    imageUrl?: string | null;
   } | null;
 };
 
@@ -78,19 +74,6 @@ type SellerOrderDetails = {
     phone?: string | null;
   } | null;
   items: OrderItem[];
-};
-
-type ApiResponse<T> = {
-  success: boolean;
-  message?: string;
-  data?: T;
-};
-
-type ApiListResponse<T> = {
-  success: boolean;
-  message?: string;
-  meta?: { page?: number; limit?: number; total?: number };
-  data?: T;
 };
 
 function toNumber(v: unknown) {
@@ -126,39 +109,14 @@ function clampText(v: string, left = 14, right = 10) {
   return `${v.slice(0, left)}…${v.slice(-right)}`;
 }
 
-const STATUS_OPTIONS: OrderStatus[] = [
-  "PLACED",
-  "PROCESSING",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
-];
+const STATUS_OPTIONS: OrderStatus[] = ["PLACED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
 
-async function fetchSellerOrderById(
-  inputId: string
-): Promise<SellerOrderDetails> {
-  const res = await fetch(
-    `/api/v1/seller/orders?limit=200&page=1&sortBy=createdAt&sortOrder=desc`,
-    {
-      method: "GET",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-    }
+async function fetchSellerOrderById(inputId: string): Promise<SellerOrderDetails> {
+  const items = await clientApi<SellerOrderItemApi[]>(
+    "/seller/orders?limit=200&page=1&sortBy=createdAt&sortOrder=desc"
   );
 
-  const json = (await res.json().catch(() => null)) as ApiListResponse<
-    SellerOrderItemApi[]
-  > | null;
-
-  if (!res.ok) {
-    throw new Error(json?.message || `Failed to load orders (${res.status})`);
-  }
-  if (!json?.success) {
-    throw new Error(json?.message || "Failed to load orders");
-  }
-
-  const list = Array.isArray(json.data) ? json.data : [];
+  const list = Array.isArray(items) ? items : [];
 
   let orderId = inputId;
   let orderItems = list.filter((it) => it.order?.id === orderId);
@@ -185,15 +143,12 @@ async function fetchSellerOrderById(
       ? {
           id: it.medicine.id,
           name: it.medicine.name,
-          image: it.medicine.image ?? null,
+          imageUrl: it.medicine.imageUrl ?? null,
         }
       : null,
   }));
 
-  const subtotal = mappedItems.reduce(
-    (sum, it) => sum + it.price * it.quantity,
-    0
-  );
+  const subtotal = mappedItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
 
   return {
     id: orderId,
@@ -207,35 +162,10 @@ async function fetchSellerOrderById(
 }
 
 async function updateOrderStatus(id: string, status: OrderStatus) {
-  const res = await fetch(`/api/v1/seller/orders/${id}`, {
+  return clientApi<any>(`/seller/orders/${id}`, {
     method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-    cache: "no-store",
+    body: { status },
   });
-
-  const json = (await res.json().catch(() => null)) as ApiResponse<any> | null;
-
-  if (!res.ok) {
-    throw new Error(json?.message || `Failed to update status (${res.status})`);
-  }
-  if (!json?.success || !json.data) {
-    throw new Error(json?.message || "Failed to update status");
-  }
-
-  return json.data as {
-    id: string;
-    status: OrderStatus;
-    updatedAt: string;
-    totalAmount: number | string;
-    customer?: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      phone?: string | null;
-    } | null;
-  };
 }
 
 export default function SellerOrderDetailsPage() {
@@ -290,10 +220,7 @@ export default function SellerOrderDetailsPage() {
               ...prev,
               status: updated.status,
               updatedAt: updated.updatedAt,
-              totalAmount: prev.items.reduce(
-                (sum, it) => sum + it.price * it.quantity,
-                0
-              ),
+              totalAmount: prev.items.reduce((sum, it) => sum + it.price * it.quantity, 0),
               customer: updated.customer ?? prev.customer,
             }
           : prev
@@ -347,9 +274,7 @@ export default function SellerOrderDetailsPage() {
           <section className="lg:col-span-2 rounded-lg border">
             <div className="p-4">
               <h2 className="font-semibold">Items</h2>
-              <p className="text-sm text-muted-foreground">
-                {order.items.length} item(s)
-              </p>
+              <p className="text-sm text-muted-foreground">{order.items.length} item(s)</p>
             </div>
             <Separator />
 
@@ -357,12 +282,8 @@ export default function SellerOrderDetailsPage() {
               {order.items.map((it) => (
                 <div key={it.id} className="rounded-2xl border p-4 space-y-3">
                   <div className="min-w-0">
-                    <div className="text-xs text-muted-foreground">
-                      Medicine
-                    </div>
-                    <div className="font-semibold truncate">
-                      {it.medicine?.name ?? "Medicine"}
-                    </div>
+                    <div className="text-xs text-muted-foreground">Medicine</div>
+                    <div className="font-semibold truncate">{it.medicine?.name ?? "Medicine"}</div>
                     <div className="mt-1 text-[11px] text-muted-foreground font-mono break-all">
                       {it.medicine?.id ?? ""}
                     </div>
@@ -380,12 +301,8 @@ export default function SellerOrderDetailsPage() {
                     </div>
 
                     <div className="col-span-2 space-y-0.5">
-                      <div className="text-xs text-muted-foreground">
-                        Line total
-                      </div>
-                      <div className="font-medium">
-                        {formatBDT(it.price * it.quantity)}
-                      </div>
+                      <div className="text-xs text-muted-foreground">Line total</div>
+                      <div className="font-medium">{formatBDT(it.price * it.quantity)}</div>
                     </div>
                   </div>
                 </div>
@@ -403,15 +320,9 @@ export default function SellerOrderDetailsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-65">Medicine</TableHead>
-                      <TableHead className="text-right min-w-35">
-                        Price
-                      </TableHead>
-                      <TableHead className="text-right min-w-22.5">
-                        Qty
-                      </TableHead>
-                      <TableHead className="text-right min-w-40">
-                        Line total
-                      </TableHead>
+                      <TableHead className="text-right min-w-35">Price</TableHead>
+                      <TableHead className="text-right min-w-22.5">Qty</TableHead>
+                      <TableHead className="text-right min-w-40">Line total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -419,9 +330,7 @@ export default function SellerOrderDetailsPage() {
                       <TableRow key={it.id}>
                         <TableCell className="font-medium">
                           <div className="flex flex-col min-w-0">
-                            <span className="truncate">
-                              {it.medicine?.name ?? "Medicine"}
-                            </span>
+                            <span className="truncate">{it.medicine?.name ?? "Medicine"}</span>
                             <div className="text-xs text-muted-foreground font-mono truncate max-w-105">
                               {it.medicine?.id ?? ""}
                             </div>
@@ -430,9 +339,7 @@ export default function SellerOrderDetailsPage() {
                         <TableCell className="text-right whitespace-nowrap">
                           {formatBDT(it.price)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {it.quantity}
-                        </TableCell>
+                        <TableCell className="text-right">{it.quantity}</TableCell>
                         <TableCell className="text-right whitespace-nowrap">
                           {formatBDT(it.price * it.quantity)}
                         </TableCell>
@@ -440,10 +347,7 @@ export default function SellerOrderDetailsPage() {
                     ))}
 
                     <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="text-right font-semibold"
-                      >
+                      <TableCell colSpan={3} className="text-right font-semibold">
                         Subtotal
                       </TableCell>
                       <TableCell className="text-right font-semibold whitespace-nowrap">
@@ -471,18 +375,14 @@ export default function SellerOrderDetailsPage() {
                 {order.customer?.email ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Email</span>
-                    <span className="text-right truncate max-w-[60%]">
-                      {order.customer.email}
-                    </span>
+                    <span className="text-right truncate max-w-[60%]">{order.customer.email}</span>
                   </div>
                 ) : null}
 
                 {order.customer?.phone ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Phone</span>
-                    <span className="text-right truncate max-w-[60%]">
-                      {order.customer.phone}
-                    </span>
+                    <span className="text-right truncate max-w-[60%]">{order.customer.phone}</span>
                   </div>
                 ) : null}
 
@@ -498,15 +398,11 @@ export default function SellerOrderDetailsPage() {
                 <div className="pt-1 text-xs text-muted-foreground">
                   <div className="flex items-center justify-between gap-3">
                     <span>Created</span>
-                    <span className="text-right">
-                      {formatDate(order.createdAt)}
-                    </span>
+                    <span className="text-right">{formatDate(order.createdAt)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span>Updated</span>
-                    <span className="text-right">
-                      {formatDate(order.updatedAt)}
-                    </span>
+                    <span className="text-right">{formatDate(order.updatedAt)}</span>
                   </div>
                 </div>
               </div>
@@ -542,8 +438,7 @@ export default function SellerOrderDetailsPage() {
                 </Button>
 
                 <p className="text-xs text-muted-foreground">
-                  Current status:{" "}
-                  <span className="font-medium">{order.status}</span>
+                  Current status: <span className="font-medium">{order.status}</span>
                 </p>
 
                 <div className="pt-1 text-[11px] text-muted-foreground font-mono break-all">

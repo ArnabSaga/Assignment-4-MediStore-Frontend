@@ -24,6 +24,8 @@ type OrderStatus =
   | "DELIVERED"
   | "CANCELLED";
 
+type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+
 type ApiResponse<T> = {
   success: boolean;
   message?: string;
@@ -50,6 +52,7 @@ type Order = {
   customerId: string;
   totalAmount: string | number;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
   shippingAddress: string;
   items: OrderItem[];
   createdAt: string;
@@ -116,6 +119,21 @@ function statusBadgeVariant(status: OrderStatus) {
   }
 }
 
+function paymentStatusBadgeVariant(status: PaymentStatus) {
+  switch (status) {
+    case "PAID":
+      return "default";
+    case "PENDING":
+      return "secondary";
+    case "FAILED":
+      return "destructive";
+    case "REFUNDED":
+      return "outline";
+    default:
+      return "secondary";
+  }
+}
+
 function readApiError(json: any, fallback: string) {
   if (!json) return fallback;
   if (typeof json.message === "string" && json.message.trim())
@@ -141,7 +159,7 @@ function summarizeItems(items?: OrderItem[]) {
 }
 
 async function apiListOrders(signal?: AbortSignal): Promise<Order[]> {
-  const url = new URL(`${API_BASE}/orders`);
+  const url = new URL(`${API_BASE}/orders`, window.location.origin);
   url.searchParams.set("page", "1");
   url.searchParams.set("limit", "50");
   url.searchParams.set("sortBy", "createdAt");
@@ -374,13 +392,21 @@ export default function AccountOrdersPage() {
                       key={o.id}
                       className="rounded-2xl border p-4 space-y-3"
                     >
-                      <div className="space-y-1">
-                        <div className="font-medium leading-5">
-                          {itemsLabel}
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="space-y-1">
+                          <div className="font-medium leading-5">
+                            {itemsLabel}
+                          </div>
+                          <div className="text-xs text-muted-foreground line-clamp-2">
+                            {o.shippingAddress}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground line-clamp-2">
-                          {o.shippingAddress}
-                        </div>
+                         <Badge
+                            variant={paymentStatusBadgeVariant(o.paymentStatus) as any}
+                            className="text-[10px] h-5"
+                          >
+                            {o.paymentStatus}
+                          </Badge>
                       </div>
 
                       <div className="flex items-center justify-between gap-3">
@@ -456,22 +482,25 @@ export default function AccountOrdersPage() {
                 <table className="w-full text-sm table-fixed">
                   <thead>
                     <tr className="border-b">
-                      <th className="py-3 pr-4 text-left font-medium w-[42%]">
+                      <th className="py-3 pr-4 text-left font-medium w-[30%]">
                         Order
                       </th>
-                      <th className="py-3 pr-4 text-left font-medium w-27.5">
+                      <th className="py-3 pr-4 text-left font-medium w-32">
                         Status
                       </th>
-                      <th className="py-3 pr-4 text-left font-medium w-30">
+                      <th className="py-3 pr-4 text-left font-medium w-32">
+                        Payment
+                      </th>
+                      <th className="py-3 pr-4 text-left font-medium w-32">
                         Total
                       </th>
-                      <th className="py-3 pr-4 text-left font-medium w-17.5">
+                       <th className="py-3 pr-4 text-left font-medium w-16">
                         Items
                       </th>
-                      <th className="py-3 pr-6 text-left font-medium w-42.5 whitespace-nowrap">
+                      <th className="py-3 pr-6 text-left font-medium w-48 whitespace-nowrap">
                         Created
                       </th>
-                      <th className="py-3 text-right font-medium w-55 whitespace-nowrap">
+                      <th className="py-3 text-right font-medium w-52 whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
@@ -515,6 +544,14 @@ export default function AccountOrdersPage() {
                               }
                             >
                               {o.status}
+                            </Badge>
+                          </td>
+
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <Badge
+                              variant={paymentStatusBadgeVariant(o.paymentStatus) as any}
+                            >
+                              {o.paymentStatus}
                             </Badge>
                           </td>
 

@@ -1,26 +1,13 @@
+import { PRODUCT_IMAGE_MAP } from "@/lib/product-images";
 import { serverApi } from "@/lib/server-api";
 import { ProductCard } from "./product-card";
-import { PRODUCT_IMAGE_MAP } from "@/lib/product-images";
 
-type Category = {
-  id: string;
-  name: string;
-  slug: string;
-};
-
-type Medicine = {
-  id: string;
-  name: string;
-  slug: string;
-  price: number | string;
-  imageUrl?: string | null;
-  category?: Category | null;
-};
+import type { Category, Medicine } from "@/types/api";
 
 async function getCategoryIdFromSlug(slug?: string) {
   if (!slug) return undefined;
 
-  const categories = await serverApi<Category[]>("/categories", {
+  const categories = await serverApi<Category[]>("/categories?limit=100", {
     cache: "no-store",
   });
 
@@ -31,7 +18,8 @@ async function getCategoryIdFromSlug(slug?: string) {
 async function getMedicines(categorySlug?: string, q?: string) {
   const params = new URLSearchParams();
 
-  if (q) params.set("search", q);
+  params.set("limit", "100");
+  if (q) params.set("searchTerm", q);
 
   const categoryId = await getCategoryIdFromSlug(categorySlug);
   if (categoryId) params.set("categoryId", categoryId);
@@ -43,29 +31,20 @@ async function getMedicines(categorySlug?: string, q?: string) {
 }
 
 function resolveImage(m: Medicine) {
-
   return (
     (m.imageUrl && m.imageUrl.trim() ? m.imageUrl : null) ??
-    PRODUCT_IMAGE_MAP[m.slug] ??
+    PRODUCT_IMAGE_MAP[m.slug!] ??
     "/images/placeholder.png"
   );
 }
 
-export async function ProductGrid({
-  category,
-  q,
-}: {
-  category?: string;
-  q?: string;
-}) {
+export async function ProductGrid({ category, q }: { category?: string; q?: string }) {
   const items = await getMedicines(category, q);
 
   if (items.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-10 text-center">
-        <p className="text-sm text-muted-foreground">
-          No products found. Try changing filters.
-        </p>
+        <p className="text-sm text-muted-foreground">No products found. Try changing filters.</p>
       </div>
     );
   }
@@ -87,9 +66,7 @@ export async function ProductGrid({
       </div>
 
       <div className="mt-8 flex justify-center">
-        <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">
-          Load more
-        </button>
+        <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">Load more</button>
       </div>
     </>
   );

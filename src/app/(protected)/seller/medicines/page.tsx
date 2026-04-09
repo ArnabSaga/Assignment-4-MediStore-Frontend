@@ -2,32 +2,19 @@
 
 export const dynamic = "force-dynamic";
 
-import * as React from "react";
 import Link from "next/link";
+import * as React from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type Medicine = {
-  id: string;
-  name: string;
-  slug: string;
-  manufacturer: string;
-  price: number;
-  stock: number;
-  isActive: boolean;
-  category?: { id: string; name: string; slug: string } | null;
-};
+import { clientApi } from "@/lib/client-api";
+import type { Medicine } from "@/types/api";
 
 function formatMoney(amount: unknown) {
-  const n =
-    typeof amount === "number"
-      ? amount
-      : typeof amount === "string"
-        ? Number(amount)
-        : 0;
+  const n = typeof amount === "number" ? amount : typeof amount === "string" ? Number(amount) : 0;
 
   const safe = Number.isFinite(n) ? n : 0;
 
@@ -44,9 +31,7 @@ function formatMoney(amount: unknown) {
 
 function statusPill(active: boolean) {
   return active ? (
-    <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-      Active
-    </Badge>
+    <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Active</Badge>
   ) : (
     <Badge variant="secondary">Inactive</Badge>
   );
@@ -69,36 +54,12 @@ export default function SellerMedicinesPage() {
   const fetchMedicines = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/seller/medicines`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        console.log("FETCH MEDICINES FAILED:", res.status, text);
-        toast.error("Failed to load medicines");
-        return;
-      }
-
-      const json = (await res.json().catch(() => null)) as {
-        success: boolean;
-        data: Medicine[];
-        message?: string;
-      } | null;
-
-      if (!json?.success) {
-        toast.error(json?.message || "Failed to load medicines");
-        return;
-      }
-
-      const list = json.data ?? [];
+      const list = await clientApi<Medicine[]>("/seller/medicines?limit=100");
       setMedicines(list);
 
       const nextMaxPage = Math.max(1, Math.ceil(list.length / pageSize));
       setPage((p) => Math.min(p, nextMaxPage));
     } catch (e) {
-      console.log(e);
       toast.error("Failed to load medicines");
     } finally {
       setLoading(false);
@@ -116,27 +77,9 @@ export default function SellerMedicinesPage() {
     setDeletingId(medicineId);
 
     try {
-      const res = await fetch(`/api/v1/seller/medicines/${medicineId}`, {
+      await clientApi(`/seller/medicines/${medicineId}`, {
         method: "DELETE",
-        credentials: "include",
       });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        console.log("DELETE FAILED:", res.status, text);
-        toast.error("Delete failed", { id: t });
-        return;
-      }
-
-      const json = (await res.json().catch(() => null)) as {
-        success?: boolean;
-        message?: string;
-      } | null;
-
-      if (json && json.success === false) {
-        toast.error(json.message || "Delete failed", { id: t });
-        return;
-      }
 
       toast.success("Deleted ✅", { id: t });
 
@@ -184,9 +127,7 @@ export default function SellerMedicinesPage() {
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : medicines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No medicines found. Create one.
-            </p>
+            <p className="text-sm text-muted-foreground">No medicines found. Create one.</p>
           ) : (
             <>
               {/* ✅ Mobile layout (cards) */}
@@ -195,50 +136,35 @@ export default function SellerMedicinesPage() {
                   const busy = deletingId === m.id;
 
                   return (
-                    <div
-                      key={m.id}
-                      className="rounded-2xl border p-4 space-y-3"
-                    >
+                    <div key={m.id} className="rounded-2xl border p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="font-semibold truncate">{m.name}</div>
                           <div className="text-xs text-muted-foreground font-mono">
-                            {clampText(m.slug)}
+                            {clampText(m.slug!)}
                           </div>
                         </div>
-                        {statusPill(m.isActive)}
+                        {statusPill(m.isActive ?? false)}
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="space-y-0.5">
-                          <div className="text-xs text-muted-foreground">
-                            Manufacturer
-                          </div>
+                          <div className="text-xs text-muted-foreground">Manufacturer</div>
                           <div className="truncate">{m.manufacturer}</div>
                         </div>
 
                         <div className="space-y-0.5">
-                          <div className="text-xs text-muted-foreground">
-                            Category
-                          </div>
-                          <div className="truncate">
-                            {m.category?.name ?? "—"}
-                          </div>
+                          <div className="text-xs text-muted-foreground">Category</div>
+                          <div className="truncate">{m.category?.name ?? "—"}</div>
                         </div>
 
                         <div className="space-y-0.5">
-                          <div className="text-xs text-muted-foreground">
-                            Price
-                          </div>
-                          <div className="font-medium">
-                            {formatMoney(m.price)}
-                          </div>
+                          <div className="text-xs text-muted-foreground">Price</div>
+                          <div className="font-medium">{formatMoney(m.price)}</div>
                         </div>
 
                         <div className="space-y-0.5">
-                          <div className="text-xs text-muted-foreground">
-                            Stock
-                          </div>
+                          <div className="text-xs text-muted-foreground">Stock</div>
                           <div className="font-medium">{m.stock}</div>
                         </div>
                       </div>
@@ -266,9 +192,7 @@ export default function SellerMedicinesPage() {
                       <th className="py-3 pr-4 whitespace-nowrap">Price</th>
                       <th className="py-3 pr-4 whitespace-nowrap">Stock</th>
                       <th className="py-3 pr-4 whitespace-nowrap">Status</th>
-                      <th className="py-3 text-right whitespace-nowrap min-w-30">
-                        Actions
-                      </th>
+                      <th className="py-3 text-right whitespace-nowrap min-w-30">Actions</th>
                     </tr>
                   </thead>
 
@@ -277,24 +201,18 @@ export default function SellerMedicinesPage() {
                       <tr key={m.id} className="border-b last:border-b-0">
                         <td className="py-4 pr-4">
                           <div className="font-medium">{m.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {m.slug}
-                          </div>
+                          <div className="text-xs text-muted-foreground">{m.slug}</div>
                         </td>
 
                         <td className="py-4 pr-4">{m.manufacturer}</td>
 
                         <td className="py-4 pr-4">{m.category?.name ?? "—"}</td>
 
-                        <td className="py-4 pr-4 whitespace-nowrap">
-                          {formatMoney(m.price)}
-                        </td>
+                        <td className="py-4 pr-4 whitespace-nowrap">{formatMoney(m.price)}</td>
 
-                        <td className="py-4 pr-4 whitespace-nowrap">
-                          {m.stock}
-                        </td>
+                        <td className="py-4 pr-4 whitespace-nowrap">{m.stock}</td>
 
-                        <td className="py-4 pr-4">{statusPill(m.isActive)}</td>
+                        <td className="py-4 pr-4">{statusPill(m.isActive ?? false)}</td>
 
                         <td className="py-4 text-right">
                           <Button

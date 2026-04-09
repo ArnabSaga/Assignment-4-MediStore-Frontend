@@ -15,9 +15,13 @@ export const env = createEnv({
   },
 
   runtimeEnv: {
-    BACKEND_URL: process.env.BACKEND_URL ?? "",
-    NEXT_PUBLIC_FRONTEND_URL: process.env.NEXT_PUBLIC_FRONTEND_URL ?? "",
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "",
-    NEXT_PUBLIC_AUTH_URL: process.env.NEXT_PUBLIC_AUTH_URL ?? "",
+    BACKEND_URL:
+      process.env.BACKEND_URL ||
+      (process.env.NODE_ENV === "development" ? "http://localhost:5000" : undefined),
+    NEXT_PUBLIC_FRONTEND_URL:
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      (process.env.NODE_ENV === "development" ? "http://localhost:3000" : undefined),
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "/api/v1",
+    NEXT_PUBLIC_AUTH_URL: process.env.NEXT_PUBLIC_AUTH_URL || "/api/auth",
   },
 });
