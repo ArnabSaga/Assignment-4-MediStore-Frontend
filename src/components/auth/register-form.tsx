@@ -27,7 +27,6 @@ const formSchema = z
     email: z.string().email("Please enter a valid email"),
     password: z.string().min(8, "Minimum 8 characters"),
     confirmPassword: z.string().min(8, "Minimum 8 characters"),
-    role: z.enum(["CUSTOMER", "SELLER"]),
   })
   .refine((v) => v.password === v.confirmPassword, {
     message: "Passwords do not match",
@@ -53,7 +52,6 @@ export function RegisterForm({
       email: "",
       password: "",
       confirmPassword: "",
-      role: "CUSTOMER" as "CUSTOMER" | "SELLER",
     },
     validators: {
       onSubmit: formSchema,
@@ -175,28 +173,6 @@ export function RegisterForm({
               </Field>
             );
           }}
-        </form.Field>
-
-        <form.Field name="role">
-          {(field) => (
-            <Field>
-              <FieldLabel>I am a</FieldLabel>
-              <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                value={field.state.value}
-                onChange={(e) =>
-                  field.handleChange(e.target.value as "CUSTOMER" | "SELLER")
-                }
-                disabled={pending}
-              >
-                <option value="CUSTOMER">Customer (Buy medicines)</option>
-                <option value="SELLER">Seller (Sell medicines)</option>
-              </select>
-              <FieldDescription>
-                This helps us personalise your MediStore experience.
-              </FieldDescription>
-            </Field>
-          )}
         </form.Field>
 
         <form.Field name="password">

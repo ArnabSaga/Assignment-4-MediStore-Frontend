@@ -47,7 +47,18 @@ export async function serverApi<T>(
     if (val) forwardedHeaders[h] = val;
   }
 
-  const res = await fetch(apiUrl(path), {
+  // 1. Dynamic Origin Resolution for SSR Transport
+  const proto = forwardedHeaders["x-forwarded-proto"] || "http";
+  const host = forwardedHeaders["x-forwarded-host"];
+  
+  // Use derive origin if host exists, otherwise fallback to configured URL
+  const base = host 
+    ? `${proto}://${host}` 
+    : (process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
+
+  const fullUrl = `${base}/api/v1/${path.replace(/^\//, "")}`;
+
+  const res = await fetch(fullUrl, {
     method: opts.method ?? "GET",
     headers: forwardedHeaders,
     credentials: "include",

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getFilteredProxyHeaders, createBadGatewayResponse } from "@/lib/api-proxy";
 
 const BACKEND_URL = process.env.BACKEND_URL!;
 
@@ -21,55 +22,53 @@ async function handler(req: NextRequest, context: { params: Promise<{ path: stri
   const target = new URL(`${BACKEND_URL}/api/auth/${path.join("/")}`);
   target.search = incomingUrl.search;
 
-  const headers = new Headers();
+  // 1. Filtered Header Proxying
+  const filteredHeaders = getFilteredProxyHeaders(req.headers);
+  const headers = new Headers(filteredHeaders);
 
-  const contentType = req.headers.get("content-type");
-  if (contentType) headers.set("content-type", contentType);
-
-  const cookie = req.headers.get("cookie");
-  if (cookie) headers.set("cookie", cookie);
-
-  // Forward essential headers
-  const origin = req.headers.get("origin") || incomingUrl.origin;
-  headers.set("origin", origin);
-  
-  const referer = req.headers.get("referer") || `${origin}/`;
-  headers.set("referer", referer);
-
-  // Identity headers for the backend
-  headers.set("x-forwarded-host", incomingUrl.host);
-  headers.set("x-forwarded-proto", incomingUrl.protocol.replace(":", ""));
+  // Ensure essential proxy headers are set if missing from client
+  if (!headers.has("x-forwarded-host")) {
+    headers.set("x-forwarded-host", incomingUrl.host);
+  }
+  if (!headers.has("x-forwarded-proto")) {
+    headers.set("x-forwarded-proto", incomingUrl.protocol.replace(":", ""));
+  }
 
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : await req.arrayBuffer();
 
-  const backendRes = await fetch(target.toString(), {
-    method: req.method,
-    headers,
-    body,
-    redirect: "manual",
-    cache: "no-store",
-  });
+  try {
+    const backendRes = await fetch(target.toString(), {
+      method: req.method,
+      headers,
+      body,
+      redirect: "manual",
+      cache: "no-store",
+    });
 
-  const outHeaders = new Headers(backendRes.headers);
+    const outHeaders = new Headers(backendRes.headers);
 
-  const setCookies: string[] =
-    (backendRes.headers as any).getSetCookie?.() ??
-    (outHeaders.get("set-cookie") ? [outHeaders.get("set-cookie")!] : []);
+    // 2. Preserve Cookie Fidelity
+    const setCookies: string[] =
+      (backendRes.headers as any).getSetCookie?.() ??
+      (outHeaders.get("set-cookie") ? [outHeaders.get("set-cookie")!] : []);
 
-  if (setCookies.length) {
-    outHeaders.delete("set-cookie");
-
-    for (const cookieValue of setCookies) {
-      if (!cookieValue) continue;
-      outHeaders.append("set-cookie", rewriteSetCookie(cookieValue, req));
+    if (setCookies.length) {
+      outHeaders.delete("set-cookie");
+      for (const cookieValue of setCookies) {
+        if (!cookieValue) continue;
+        outHeaders.append("set-cookie", rewriteSetCookie(cookieValue, req));
+      }
     }
-  }
 
-  return new NextResponse(backendRes.body, {
-    status: backendRes.status,
-    headers: outHeaders,
-  });
+    return new NextResponse(backendRes.body, {
+      status: backendRes.status,
+      headers: outHeaders,
+    });
+  } catch (error) {
+    return createBadGatewayResponse(error);
+  }
 }
+
 
 export const GET = handler;
 export const POST = handler;
