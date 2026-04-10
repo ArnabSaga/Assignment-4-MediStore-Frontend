@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import { ShoppingCart, Heart, Eye } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,84 +14,84 @@ type FeaturedProduct = {
   name: string;
   subtitle?: string;
   price: number;
-  image: string; 
-  href: string; 
+  image: string;
+  href: string;
 };
 
 const products: FeaturedProduct[] = [
   {
     id: "p1",
-    name: "Cef-3",
-    subtitle: "900g",
+    name: "Cef-3 Antibiotic",
+    subtitle: "900g Powder for Suspension",
     price: 150.0,
-    image: "/images/products/antibiotic-cef-3.webp",
+    image: "/images/medicines/antibiotic-cef-3.webp",
     href: "/shop/p1",
   },
   {
     id: "p2",
     name: "Fexo 180mg",
-    subtitle: "10 tablets",
+    subtitle: "10 Tablets / Strip",
     price: 120.0,
-    image: "/images/products/allergy-fexo.webp",
+    image: "/images/medicines/allergy-fexo.webp",
     href: "/shop/p2",
   },
   {
     id: "p3",
-    name: "Saffola Oil",
-    subtitle: "5 liter",
+    name: "Saffola Gold Oil",
+    subtitle: "5 Liters Enriched Oil",
     price: 1200,
-    image: "/images/products/saffola.webp",
+    image: "/images/medicines/saffola.webp",
     href: "/shop/p3",
   },
   {
     id: "p4",
     name: "Napa 500mg",
-    subtitle: "12 tablets",
+    subtitle: "12 Tablets Paracetamol",
     price: 25,
-    image: "/images/products/pain-fever-napa.webp",
+    image: "/images/medicines/pain-fever-napa.webp",
     href: "/shop/p4",
   },
   {
     id: "p5",
-    name: "Becosules",
-    subtitle: "9 tablets",
+    name: "Becosules Vitamin",
+    subtitle: "9 Capsules B-Complex",
     price: 190,
-    image: "/images/products/vitamin-becosules.webp",
+    image: "/images/medicines/vitamin-becosules.webp",
     href: "/shop/p5",
   },
   {
     id: "p6",
-    name: "Napa liquid",
-    subtitle: "250 ml",
+    name: "Napa Pediatric Liquid",
+    subtitle: "250 ml Strawberry Flavor",
     price: 70,
-    image: "/images/products/pain-fever-napa-liquid.webp",
+    image: "/images/medicines/pain-fever-napa-liquid.webp",
     href: "/shop/p6",
   },
   {
     id: "p7",
-    name: "Januvia",
-    subtitle: "10 capsules",
+    name: "Januvia 100mg",
+    subtitle: "10 Capsules / Strip",
     price: 130,
-    image: "/images/products/diabetes-januvia.webp",
+    image: "/images/medicines/diabetes-januvia.webp",
     href: "/shop/p7",
   },
   {
     id: "p8",
-    name: "Combo Set",
-    subtitle: "5 Porducts",
+    name: "Premium Skin Care",
+    subtitle: "5 Products Combo Set",
     price: 1600,
-    image: "/images/products/skin-care-medicine.webp",
+    image: "/images/medicines/skin-care-medicine.webp",
     href: "/shop/p8",
   },
 ];
 
 function formatPrice(n: number) {
-  return `BDT ${n.toFixed(2)}`;
+  return `BDT ${n.toLocaleString()}`;
 }
 
 export function FeaturedProducts({
   className,
-  label = "Products",
+  label = "Best Sellers",
   heading = "Featured Products",
   viewAllHref = "/shop",
 }: {
@@ -98,92 +102,131 @@ export function FeaturedProducts({
 }) {
   return (
     <section
-      className={cn("py-10 md:py-14 bg-zinc-100 dark:bg-zinc-900", className)}
+      className={cn("py-12 md:py-20 bg-zinc-50/50 dark:bg-zinc-950/20", className)}
       aria-labelledby="featured-products"
     >
-      <div className="mx-auto max-w-6xl px-4">
+      <div className="container-custom">
         {/* Header */}
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">{label}</p>
-            <h2
-              id="featured-products"
-              className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl"
-            >
+        <div className="mb-10 flex items-end justify-between gap-4">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">{label}</p>
+            <h2 id="featured-products" className="text-3xl font-bold tracking-tight md:text-4xl">
               {heading}
             </h2>
-          </div>
+          </motion.div>
 
           <Link
             href={viewAllHref}
-            className="link-hover hidden text-sm text-muted-foreground sm:inline-flex"
+            className="group flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors"
           >
-            View all
+            View all <span className="hidden sm:inline">products</span>
           </Link>
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((p) => (
-            <Card
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+          {products.map((p, index) => (
+            <motion.div
               key={p.id}
-              className="overflow-hidden border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: (index % 4) * 0.1 }}
             >
-              <CardContent className="p-4">
-                {/* Image */}
-                <Link href={p.href} className="group block">
-                  <div className="relative h-36 w-full overflow-hidden rounded-xl bg-muted">
+              <Card className="group h-full overflow-hidden border-border/40 bg-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-premium">
+                <CardContent className="p-0">
+                  {/* Image Container */}
+                  <div className="relative aspect-square w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
                     <Image
                       src={p.image}
                       alt={p.name}
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
+
+                    {/* Action Overlays (Desktop Only) */}
+                    <div className="absolute inset-0 bg-black/5 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden md:flex">
+                         <div className="flex gap-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                            <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors">
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors">
+                                <Heart className="h-4 w-4" />
+                            </Button>
+                         </div>
+                    </div>
+
+                    {/* Badge */}
+                    <div className="absolute left-3 top-3">
+                        <span className="rounded-full bg-primary/95 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg backdrop-blur-sm">
+                            Premium
+                        </span>
+                    </div>
                   </div>
 
-                  {/* Name */}
-                  <div className="mt-3 space-y-1">
-                    <p className="line-clamp-1 text-sm font-semibold">
-                      {p.name}
-                    </p>
-                    {p.subtitle ? (
-                      <p className="text-xs text-muted-foreground">
-                        {p.subtitle}
-                      </p>
-                    ) : null}
-                  </div>
-                </Link>
+                  {/* Product Info */}
+                  <div className="p-4 md:p-5">
+                    <div className="mb-4 h-12">
+                        <Link href={p.href} className="block group/link">
+                            <h3 className="line-clamp-2 text-sm font-bold tracking-tight group-hover/link:text-primary transition-colors">
+                                {p.name}
+                            </h3>
+                            {p.subtitle && (
+                                <p className="mt-1 line-clamp-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    {p.subtitle}
+                                </p>
+                            )}
+                        </Link>
+                    </div>
 
-                {/* Price + CTA */}
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold">
-                    {formatPrice(p.price)}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="btn-outline h-9 rounded-full px-3"
-                  >
-                    Add to cart
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="flex items-center justify-between gap-4 mt-2">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground leading-tight tracking-wider">Price</span>
+                        <p className="text-base font-bold text-foreground">
+                            {formatPrice(p.price)}
+                        </p>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        className="h-9 w-9 p-0 rounded-full bg-zinc-100 text-zinc-900 hover:bg-primary hover:text-white dark:bg-zinc-800 dark:text-zinc-100 md:h-10 md:w-auto md:px-4 md:gap-2 transition-all shadow-sm"
+                      >
+                        <ShoppingCart className="h-4 w-4" />
+                        <span className="hidden md:inline font-bold text-xs uppercase tracking-wide">Add</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
         </div>
 
-        {/* Bottom CTA */}
-        <div className="mt-8 flex justify-center">
+        {/* Footer CTA */}
+        <motion.div
+           initial={{ opacity: 0 }}
+           whileInView={{ opacity: 1 }}
+           viewport={{ once: true }}
+           className="mt-12 flex flex-col items-center justify-center text-center"
+        >
           <Button
             asChild
             variant="outline"
-            className="btn-outline rounded-full px-6"
+            size="lg"
+            className="h-12 rounded-full border-border bg-background px-10 font-bold uppercase tracking-widest text-xs transition-transform hover:scale-105 active:scale-95 shadow-sm"
           >
-            <Link href={viewAllHref}>Get more</Link>
+            <Link href={viewAllHref}>Explore full catalogue</Link>
           </Button>
-        </div>
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+             Trusted by over 10,000+ customers
+          </p>
+        </motion.div>
       </div>
     </section>
   );

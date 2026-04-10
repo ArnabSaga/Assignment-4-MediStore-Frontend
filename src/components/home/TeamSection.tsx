@@ -1,6 +1,12 @@
+"use client";
+
 import Image from "next/image";
+import { motion } from "framer-motion";
+import { Linkedin, Twitter, Mail } from "lucide-react";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type TeamMember = {
   name: string;
@@ -38,111 +44,91 @@ const team: TeamMember[] = [
 
 export function TeamSection({
   className,
-  heading = "Meet Our Team",
-  subheading = "A small team with a big focus: safe OTC shopping, fast delivery, and trusted service.",
+  heading = "Professional Leadership",
+  subheading = "A dedicated team focused on safe healthcare access, operational excellence, and technical security.",
 }: {
   className?: string;
   heading?: string;
   subheading?: string;
 }) {
   return (
-    <section
-      className={cn("py-10 md:py-14 bg-zinc-100 dark:bg-zinc-900", className)}
-      aria-labelledby="team"
-    >
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="mb-8 text-center">
-          <h2
-            id="team"
-            className="text-2xl font-semibold tracking-tight md:text-4xl"
+    <section className={cn("py-12 md:py-20 bg-zinc-50 dark:bg-zinc-950/20", className)} aria-labelledby="team">
+      <div className="container-custom">
+        <div className="mb-12 text-center">
+          <motion.div
+             initial={{ opacity: 0, y: 10 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             transition={{ duration: 0.5 }}
           >
-            {heading}
-          </h2>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
-            {subheading}
-          </p>
+            <h2 id="team" className="text-3xl font-bold tracking-tight md:text-4xl text-pretty">
+               {heading}
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
+               {subheading}
+            </p>
+          </motion.div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {team.map((m) => (
-            <Card
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {team.map((m, index) => (
+            <motion.div
               key={m.name}
-              className="
-                group relative overflow-hidden border-border bg-card text-card-foreground
-                rounded-(--radius)
-                transition-all duration-300 hover:-translate-y-1 hover:shadow-md
-              "
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: index * 0.1 }}
             >
-              {/* IMPORTANT: no padding anywhere */}
-              <CardContent className="p-0">
-                {/* give the fill image a real height */}
-                <div className="relative h-80 w-full overflow-hidden">
-                  {/* IMAGE LAYER */}
-                  <div className="absolute inset-0 transition-all duration-300 ease-out group-hover:opacity-0 group-hover:scale-[1.03]">
+              <Card className="group relative h-[400px] overflow-hidden border-border/40 bg-card rounded-m shadow-premium transition-all">
+                <CardContent className="h-full p-0">
+                  {/* Image Layer */}
+                  <div className="relative h-full w-full">
                     <Image
                       src={m.image}
                       alt={m.name}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      className="object-cover"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
-                    {/* ✅ correct gradient class */}
-                    <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/25 to-transparent" />
-                  </div>
+                    {/* Default Overlay */}
+                    <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 group-hover:opacity-40" />
 
-                  {/* CONTENT LAYER */}
-                  <div
-                    className="
-                      absolute inset-0 flex flex-col justify-between
-                      bg-background/95 p-5
-                      opacity-0 translate-y-3
-                      transition-all duration-300 ease-out
-                      group-hover:opacity-100 group-hover:translate-y-0
-                      dark:bg-background/90
-                    "
-                  >
-                    <div>
-                      <p className="text-base font-semibold">{m.name}</p>
-                      <p className="mt-1 text-xs font-medium text-muted-foreground">
+                    {/* Bottom Info Bar (Visible by default) */}
+                    <div className="absolute inset-x-0 bottom-0 p-6 text-white transition-all duration-300 group-hover:translate-y-4 group-hover:opacity-0">
+                      <p className="text-lg font-bold tracking-tight">{m.name}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-primary/90">
                         {m.role}
-                      </p>
-
-                      <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                        {m.bio}
                       </p>
                     </div>
 
-                    <p className="text-xs text-muted-foreground">
-                      MediStore Team
-                    </p>
+                    {/* Hover Content Layer */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:backdrop-blur-sm bg-black/60 translate-y-8 group-hover:translate-y-0">
+                      <p className="text-xl font-bold text-white mb-2">{m.name}</p>
+                      <p className="text-xs font-bold text-primary uppercase tracking-widest mb-4">{m.role}</p>
+
+                      <p className="text-sm font-medium text-white/80 leading-relaxed mb-6">
+                        {m.bio}
+                      </p>
+
+                      <div className="flex gap-3">
+                         <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/10 text-white hover:bg-primary transition-colors">
+                            <Linkedin className="h-4 w-4" />
+                         </Button>
+                         <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/10 text-white hover:bg-primary transition-colors">
+                            <Twitter className="h-4 w-4" />
+                         </Button>
+                         <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full bg-white/10 text-white hover:bg-primary transition-colors">
+                            <Mail className="h-4 w-4" />
+                         </Button>
+                      </div>
+                    </div>
+
+                    {/* Bottom Accent Line */}
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-primary scale-x-0 transition-transform duration-500 group-hover:scale-x-100 origin-left" />
                   </div>
-
-                  {/* NAME BAR (visible before hover) */}
-                  <div className="absolute inset-x-0 bottom-0 p-4 transition-opacity duration-200 group-hover:opacity-0">
-                    <p className="text-base font-semibold text-white">
-                      {m.name}
-                    </p>
-                    <p className="text-xs font-medium text-white/80">
-                      {m.role}
-                    </p>
-                  </div>
-
-                  {/* ✅ bottom accent bar */}
-                  <div
-                    className="
-                      pointer-events-none absolute inset-x-0 bottom-0 h-0.75
-                      origin-left scale-x-0
-                      bg-(--button-accent)
-                      transition-transform duration-300 ease-out
-                      group-hover:scale-x-100
-                    "
-                  />
-
-                  {/* subtle ring */}
-                  <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-border/40" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
         </div>
       </div>

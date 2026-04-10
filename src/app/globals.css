@@ -39,6 +39,15 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Radius Scale */
+  --radius-s: 0.5rem;
+  --radius-m: 0.75rem;
+  --radius-l: 1.5rem;
+
+  /* Premium Shadows */
+  --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 20px -5px color-mix(in oklab, var(--button-primary) 40%, transparent);
 }
 
 /* ============================
@@ -49,6 +58,12 @@
 
   --background: #ffffff;
   --foreground: #0d0d0d;
+
+  /* Glass & Glow Defaults (Light) */
+  --glass-opacity: 0.6;
+  --glass-border-opacity: 0.2;
+  --glow-opacity: 0.08;
+  --glow-color: 17, 138, 178; /* --button-primary */
 
   --card: #f6f6f6;
   --card-foreground: #0d0d0d;
@@ -87,6 +102,12 @@
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+
+  /* Glass & Glow Defaults (Dark) */
+  --glass-opacity: 0.4;
+  --glass-border-opacity: 0.1;
+  --glow-opacity: 0.15;
+  --glow-color: 0, 180, 216; /* Lighter blue for dark mode */
 
   --card: #141414;
   --card-foreground: #ededed;
@@ -307,5 +328,42 @@
 
   .text-muted {
     color: var(--muted-foreground);
+  }
+
+  /* CONTAINER SYSTEM */
+  .container-custom {
+    @apply mx-auto w-full max-w-7xl px-4 md:px-8 lg:px-12;
+  }
+
+  /* INTERACTION SYSTEM */
+  .interactive-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  .interactive-hover:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  .interactive-active:active {
+    @apply translate-y-0 scale-[0.98];
+  }
+
+  .glass-surface {
+    background-color: rgba(var(--background-rgb, 255, 255, 255), var(--glass-opacity));
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity));
+  }
+
+  .glow-primary {
+    position: relative;
+  }
+
+  .glow-primary::before {
+    content: "";
+    position: absolute;
+    inset: -20px;
+    background: radial-gradient(circle at center, rgba(var(--glow-color), var(--glow-opacity)) 0%, transparent 70%);
+    z-index: -1;
+    pointer-events: none;
   }
 }
