@@ -1,21 +1,32 @@
 "use client";
 
+import { env } from "@/env";
 import { createAuthClient } from "better-auth/react";
 
-function resolveAuthBaseURL() {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/api/auth`;
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function getFrontendOrigin() {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return trimTrailingSlash(window.location.origin);
   }
 
-  const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel}/api/auth`;
+  if (env.NEXT_PUBLIC_FRONTEND_URL) {
+    return trimTrailingSlash(env.NEXT_PUBLIC_FRONTEND_URL);
+  }
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL;
-  if (site) return `${site.replace(/\/$/, "")}/api/auth`;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${trimTrailingSlash(process.env.VERCEL_PROJECT_PRODUCTION_URL)}`;
+  }
 
-  return "http://localhost:3000/api/auth";
+  if (process.env.VERCEL_URL) {
+    return `https://${trimTrailingSlash(process.env.VERCEL_URL)}`;
+  }
+
+  return "http://localhost:3000";
 }
 
 export const authClient = createAuthClient({
-  baseURL: resolveAuthBaseURL(),
+  baseURL: `${getFrontendOrigin()}/api/auth`,
 });

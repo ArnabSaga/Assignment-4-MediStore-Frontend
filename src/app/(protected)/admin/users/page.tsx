@@ -6,81 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Table,
+  TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableBody,
-  TableCell,
 } from "@/components/ui/table";
 
-type Role = "CUSTOMER" | "SELLER" | "ADMIN";
+import { clientApi } from "@/lib/client-api";
+import type { Role, CurrentUser as UserRow } from "@/types/api";
 
-type UserRow = {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  isBanned: boolean;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
+const API = {
+  list: "/admin/users?limit=100",
+  status: (id: string) => `/admin/users/${id}/status`,
+  role: (id: string) => `/admin/users/${id}/role`,
+  remove: (id: string) => `/admin/users/${id}`,
+} as const;
 
-type ApiResponse<T> = {
-  success: boolean;
-  message?: string;
-  data?: T;
-};
-
-async function getJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    method: "GET",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
-    throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
-
-async function patchJSON<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
-    throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
-
-async function delJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    method: "DELETE",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
-    throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
+// Removed local fetch helpers in favor of clientApi
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -103,9 +53,7 @@ export default function AdminUsersPage() {
 
   const [q, setQ] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState<Role | "ALL">("ALL");
-  const [banFilter, setBanFilter] = React.useState<"ALL" | "BANNED" | "ACTIVE">(
-    "ALL"
-  );
+  const [banFilter, setBanFilter] = React.useState<"ALL" | "BANNED" | "ACTIVE">("ALL");
 
   const pageSize = 6;
   const [page, setPage] = React.useState(1);
@@ -116,12 +64,10 @@ export default function AdminUsersPage() {
     setSuccess(null);
 
     try {
-      const res = await getJSON<ApiResponse<UserRow[]>>(`/api/v1/admin/users`);
-      if (!res.success) throw new Error(res.message || "Failed to load users");
-      const list = res.data ?? [];
-      setUsers(list);
+      const data = await clientApi<UserRow[]>(API.list, { method: "GET" });
+      setUsers(data ?? []);
 
-      const maxPage = Math.max(1, Math.ceil(list.length / pageSize));
+      const maxPage = Math.max(1, Math.ceil((data?.length ?? 0) / pageSize));
       setPage((p) => Math.min(p, maxPage));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load users");
@@ -149,7 +95,7 @@ export default function AdminUsersPage() {
         const hay = [u.id, u.name, u.email, u.role].join(" ").toLowerCase();
         return hay.includes(query);
       })
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+      .sort((a, b) => (a.createdAt! < b.createdAt! ? 1 : -1));
   }, [users, q, roleFilter, banFilter]);
 
   React.useEffect(() => {
@@ -176,21 +122,13 @@ export default function AdminUsersPage() {
     setSuccess(null);
 
     try {
-      const res = await patchJSON<ApiResponse<UserRow>>(
-        `/api/v1/admin/users/${u.id}/status`,
-        { isBanned: !u.isBanned }
-      );
+      const data = await clientApi<UserRow>(API.status(u.id), {
+        method: "PATCH",
+        body: { isBanned: !u.isBanned },
+      });
 
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to update ban status");
-      }
-
-      setRow(res.data);
-      setSuccess(
-        res.data.isBanned
-          ? "User banned successfully."
-          : "User unbanned successfully."
-      );
+      setRow(data);
+      setSuccess(data.isBanned ? "User banned successfully." : "User unbanned successfully.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update ban status");
     } finally {
@@ -206,16 +144,12 @@ export default function AdminUsersPage() {
     setSuccess(null);
 
     try {
-      const res = await patchJSON<ApiResponse<UserRow>>(
-        `/api/v1/admin/users/${u.id}/role`,
-        { role }
-      );
+      const data = await clientApi<UserRow>(API.role(u.id), {
+        method: "PATCH",
+        body: { role },
+      });
 
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to change role");
-      }
-
-      setRow(res.data);
+      setRow(data);
       setSuccess("User role updated successfully.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to change role");
@@ -235,10 +169,7 @@ export default function AdminUsersPage() {
     setSuccess(null);
 
     try {
-      const res = await delJSON<ApiResponse<null>>(
-        `/api/v1/admin/users/${u.id}`
-      );
-      if (!res.success) throw new Error(res.message || "Failed to delete user");
+      await clientApi<null>(API.remove(u.id), { method: "DELETE" });
 
       setUsers((prev) => prev.filter((x) => x.id !== u.id));
       setSuccess("User deleted successfully.");
@@ -256,11 +187,7 @@ export default function AdminUsersPage() {
           <h1 className="text-xl font-semibold">Users</h1>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={() => void load()}
-          disabled={loading || !!busyId}
-        >
+        <Button variant="outline" onClick={() => void load()} disabled={loading || !!busyId}>
           Refresh
         </Button>
       </div>
@@ -286,10 +213,7 @@ export default function AdminUsersPage() {
         />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:gap-3">
-          <Select
-            value={roleFilter}
-            onValueChange={(v) => setRoleFilter(v as Role | "ALL")}
-          >
+          <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as Role | "ALL")}>
             <SelectTrigger className="w-full sm:w-auto sm:min-w-45">
               <SelectValue placeholder="Role" />
             </SelectTrigger>
@@ -303,9 +227,7 @@ export default function AdminUsersPage() {
 
           <Select
             value={banFilter}
-            onValueChange={(v) =>
-              setBanFilter(v as "ALL" | "BANNED" | "ACTIVE")
-            }
+            onValueChange={(v) => setBanFilter(v as "ALL" | "BANNED" | "ACTIVE")}
           >
             <SelectTrigger className="w-full sm:w-auto sm:min-w-45">
               <SelectValue placeholder="Status" />
@@ -336,9 +258,7 @@ export default function AdminUsersPage() {
               <div key={u.id} className="rounded-2xl border p-4 space-y-3">
                 <div className="space-y-1">
                   <div className="text-sm font-semibold">{u.name}</div>
-                  <div className="text-xs text-muted-foreground break-all">
-                    {u.email}
-                  </div>
+                  <div className="text-xs text-muted-foreground break-all">{u.email}</div>
                   <div className="text-[11px] text-muted-foreground">
                     ID: <span className="font-mono">{clampId(u.id)}</span>
                   </div>
@@ -371,9 +291,7 @@ export default function AdminUsersPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">
-                      Verified
-                    </div>
+                    <div className="text-xs text-muted-foreground">Verified</div>
                     <span className="inline-flex w-fit rounded-md border px-2 py-1 text-xs">
                       {u.emailVerified ? "YES" : "NO"}
                     </span>
@@ -381,7 +299,7 @@ export default function AdminUsersPage() {
 
                   <div className="space-y-1">
                     <div className="text-xs text-muted-foreground">Created</div>
-                    <div className="text-sm">{formatDate(u.createdAt)}</div>
+                    <div className="text-sm">{formatDate(u.createdAt!)}</div>
                   </div>
                 </div>
 
@@ -447,9 +365,7 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{u.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {u.email}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{u.email}</span>
                         <span className="text-[11px] text-muted-foreground truncate max-w-105">
                           {u.id}
                         </span>
@@ -486,7 +402,7 @@ export default function AdminUsersPage() {
                     </TableCell>
 
                     <TableCell className="text-sm whitespace-nowrap">
-                      {formatDate(u.createdAt)}
+                      {formatDate(u.createdAt!)}
                     </TableCell>
 
                     <TableCell className="text-right">

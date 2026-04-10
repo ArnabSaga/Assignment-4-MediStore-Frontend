@@ -18,7 +18,8 @@ export type ApiResponse<T> = {
 export type Category = {
   id: string;
   name: string;
-  slug?: string; 
+  slug?: string;
+  description?: string | null; 
   createdAt?: string;
   updatedAt?: string;
 };
@@ -52,6 +53,8 @@ export type OrderStatus =
   | "DELIVERED"
   | "CANCELLED";
 
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+
 export type OrderItem = {
   id: string;
   orderId: string;
@@ -72,6 +75,8 @@ export type Order = {
   sellerId: string;
 
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  transactionId?: string | null;
 
   totalAmount: Money;
   shippingAddress: string;

@@ -1,9 +1,9 @@
-import { env } from "@/env";
-
-export function apiUrl(path: string) {
-  const base = env.NEXT_PUBLIC_API_URL.endsWith("/")
-    ? env.NEXT_PUBLIC_API_URL
-    : `${env.NEXT_PUBLIC_API_URL}/`;
+/**
+ * Generates an API URL for the V1 backend.
+ * Returns a browser-relative path to ensure consistency across environments.
+ */
+export function apiUrl(path: string): string {
   const p = path.replace(/^\//, "");
-  return new URL(p, base).toString();
+  return `/api/v1/${p}`;
 }
+

@@ -10,21 +10,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-
-  async rewrites() {
-    const backend = process.env.BACKEND_URL;
-
-    return [
-      {
-        source: "/api/auth/:path*",
-        destination: `${backend}/api/auth/:path*`,
-      },
-      {
-        source: "/api/v1/:path*",
-        destination: `${backend}/api/v1/:path*`,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

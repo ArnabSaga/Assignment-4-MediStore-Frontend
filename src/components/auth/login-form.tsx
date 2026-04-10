@@ -1,26 +1,18 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import * as React from "react";
 import * as z from "zod";
 
+import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
-import { authClient } from "@/lib/auth-client";
 
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { resendVerificationEmail } from "@/lib/email-verification";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -31,13 +23,42 @@ type LoginFormProps = React.ComponentProps<"form"> & {
   next?: string;
 };
 
-export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
-  const router = useRouter();
+function extractAuthErrorMessage(error: unknown) {
+  if (!error) return "Login failed";
 
+  if (typeof error === "string") return error;
+
+  if (typeof error === "object") {
+    const e = error as Record<string, unknown>;
+
+    if (typeof e.message === "string" && e.message.trim()) {
+      return e.message;
+    }
+
+    if (typeof e.error === "string" && e.error.trim()) {
+      return e.error;
+    }
+
+    if (typeof e.statusText === "string" && e.statusText.trim()) {
+      return e.statusText;
+    }
+
+    if (
+      e.cause &&
+      typeof e.cause === "object" &&
+      "message" in e.cause &&
+      typeof (e.cause as { message?: unknown }).message === "string"
+    ) {
+      return (e.cause as { message: string }).message;
+    }
+  }
+
+  return "Login failed";
+}
+
+export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
   const [pending, setPending] = React.useState(false);
-  const [notVerifiedEmail, setNotVerifiedEmail] = React.useState<string | null>(
-    null
-  );
+  const [notVerifiedEmail, setNotVerifiedEmail] = React.useState<string | null>(null);
   const [resendPending, setResendPending] = React.useState(false);
 
   const form = useForm({
@@ -52,35 +73,40 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
       setPending(true);
       setNotVerifiedEmail(null);
 
-      const toastId = toast.loading("Logging in…");
+      const toastId = toast.loading("Logging in...");
 
       try {
-        const { error } = await authClient.signIn.email(value);
+        const result = await authClient.signIn.email({
+          email: value.email,
+          password: value.password,
+        });
 
-        if (error) {
-          const msg = error.message ?? "Login failed";
-          const msgLower = msg.toLowerCase();
+        console.log("login result:", result);
 
+        const message = extractAuthErrorMessage(result?.error);
+        const lower = message.toLowerCase();
+
+        if (result?.error) {
           if (
-            msgLower.includes("verify") ||
-            msgLower.includes("not verified")
+            lower.includes("verify") ||
+            lower.includes("not verified") ||
+            lower.includes("email verification")
           ) {
             setNotVerifiedEmail(value.email);
-            toast.error("Please verify your email first. Check your inbox.", {
-              id: toastId,
-            });
-          } else {
-            toast.error(msg, { id: toastId });
+            toast.error("Please verify your email first.", { id: toastId });
+            return;
           }
+
+          toast.error(message, { id: toastId });
           return;
         }
 
-        toast.success("Welcome back to MediStore 💊", { id: toastId });
-
-        // ✅ IMPORTANT: hard redirect so cookie/session is guaranteed to load
+        toast.success("Welcome back to MediStore", { id: toastId });
         window.location.href = next;
-      } catch {
-        toast.error("Something went wrong, please try again.", { id: toastId });
+      } catch (error) {
+        const message = extractAuthErrorMessage(error);
+        toast.error(message, { id: toastId });
+        console.error("login exception:", error);
       } finally {
         setPending(false);
       }
@@ -98,8 +124,8 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
         provider: "google",
         callbackURL,
       });
-    } catch {
-      toast.error("Google sign-in failed. Please try again.");
+    } catch (error) {
+      toast.error(extractAuthErrorMessage(error));
       setPending(false);
     }
   };
@@ -108,7 +134,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
     if (!notVerifiedEmail || resendPending) return;
 
     setResendPending(true);
-    const t = toast.loading("Sending verification email…");
+    const t = toast.loading("Sending verification email...");
 
     try {
       await resendVerificationEmail(notVerifiedEmail, next);
@@ -135,9 +161,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
     >
       <FieldGroup className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col gap-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Login to MediStore
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Login to MediStore</h1>
           <p className="text-sm text-muted-foreground">
             Enter your email and password to continue.
           </p>
@@ -147,7 +171,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
             <p className="font-medium">Email not verified</p>
             <p className="text-muted-foreground">
-              We blocked login because your email isn’t verified.
+              We blocked login because your email is not verified yet.
             </p>
 
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -158,7 +182,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
                 onClick={handleResend}
                 disabled={resendPending}
               >
-                {resendPending ? "Sending…" : "Resend verification email"}
+                {resendPending ? "Sending..." : "Resend verification email"}
               </Button>
 
               <Button asChild type="button" variant="ghost">
@@ -176,8 +200,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
 
         <form.Field name="email">
           {(field) => {
-            const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+            const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
             return (
               <Field>
@@ -194,9 +217,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
                   required
                   disabled={pending}
                 />
-                {isInvalid ? (
-                  <FieldError errors={field.state.meta.errors} />
-                ) : null}
+                {isInvalid ? <FieldError errors={field.state.meta.errors} /> : null}
               </Field>
             );
           }}
@@ -204,8 +225,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
 
         <form.Field name="password">
           {(field) => {
-            const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid;
+            const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
             return (
               <Field>
@@ -223,6 +243,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
                   id={field.name}
                   name={field.name}
                   type="password"
+                  placeholder="••••••••"
                   autoComplete="current-password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -230,56 +251,32 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
                   required
                   disabled={pending}
                 />
-                {isInvalid ? (
-                  <FieldError errors={field.state.meta.errors} />
-                ) : null}
+
+                {isInvalid ? <FieldError errors={field.state.meta.errors} /> : null}
               </Field>
             );
           }}
         </form.Field>
 
-        <Field>
-          <Button
-            type="submit"
-            className="btn-primary w-full"
-            disabled={pending}
-          >
-            {pending ? "Logging in..." : "Login"}
-          </Button>
-        </Field>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Logging in..." : "Login"}
+        </Button>
 
-        <FieldSeparator>Or</FieldSeparator>
+        <div className="relative text-center text-sm">
+          <span className="bg-card px-2 text-muted-foreground">Or</span>
+        </div>
 
-        <Field>
-          <Button
-            variant="outline"
-            type="button"
-            className="btn-outline w-full"
-            disabled={pending}
-            onClick={handleGoogleLogin}
-          >
-            Continue with Google
-          </Button>
+        <Button type="button" variant="outline" onClick={handleGoogleLogin} disabled={pending}>
+          Continue with Google
+        </Button>
 
-          <FieldDescription className="mt-3 text-center text-sm">
-            Don&apos;t have an account?{" "}
-            <Link
-              href={`/register?next=${encodeURIComponent(next)}`}
-              className="underline underline-offset-4"
-            >
-              Register
-            </Link>
-          </FieldDescription>
-        </Field>
+        <p className="text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="underline underline-offset-4">
+            Register
+          </Link>
+        </p>
       </FieldGroup>
-
-      <p className="text-center text-xs text-muted-foreground">
-        By continuing, you agree to our{" "}
-        <Link href="/privacy" className="underline underline-offset-4">
-          Privacy Policy
-        </Link>
-        .
-      </p>
     </form>
   );
 }

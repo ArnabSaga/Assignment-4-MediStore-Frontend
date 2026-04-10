@@ -15,86 +15,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type Category = {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-type ApiResponse<T> = {
-  success: boolean;
-  message?: string;
-  data?: T;
-  meta?: any;
-};
+import { clientApi } from "@/lib/client-api";
+import type { Category, ApiResponse } from "@/types/api";
 
 const API = {
-  list: "/api/v1/categories",
-  create: "/api/v1/categories",
-  update: (id: string) => `/api/v1/categories/${id}`,
-  remove: (id: string) => `/api/v1/categories/${id}`,
+  list: "/categories?limit=100",
+  create: "/admin/categories",
+  update: (id: string) => `/admin/categories/${id}`,
+  remove: (id: string) => `/admin/categories/${id}`,
 } as const;
 
-async function readJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    method: "GET",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
-    throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
-
-async function postJSON<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
-    throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
-
-async function putJSON<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
-    throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
-
-async function delJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    method: "DELETE",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok)
-    throw new Error(json?.message || `Request failed (${res.status})`);
-  return json as T;
-}
+// Removed local fetch helpers in favor of clientApi
 
 function clampText(v: string, left = 12, right = 6) {
   if (!v) return "";
@@ -128,15 +59,10 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await readJSON<ApiResponse<Category[]>>(API.list);
+      const data = await clientApi<Category[]>(API.list, { method: "GET" });
+      setCategories(data ?? []);
 
-      if (!res.success)
-        throw new Error(res.message || "Failed to load categories");
-
-      const list = res.data ?? [];
-      setCategories(list);
-
-      const maxPage = Math.max(1, Math.ceil(list.length / pageSize));
+      const maxPage = Math.max(1, Math.ceil((data?.length ?? 0) / pageSize));
       setPage((p) => Math.min(p, maxPage));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load categories");
@@ -201,16 +127,15 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await postJSON<ApiResponse<Category>>(API.create, {
-        name,
-        description: description ? description : undefined,
+      const data = await clientApi<Category>(API.create, {
+        method: "POST",
+        body: {
+          name,
+          description: description ? description : undefined,
+        },
       });
 
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to create category");
-      }
-
-      setCategories((prev) => [res.data!, ...prev]);
+      setCategories((prev) => [data, ...prev]);
       setNewName("");
       setNewDescription("");
       setSuccess("Category created successfully.");
@@ -234,16 +159,15 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await putJSON<ApiResponse<Category>>(API.update(id), {
-        name,
-        description: description ? description : null,
+      const data = await clientApi<Category>(API.update(id), {
+        method: "PATCH", // Backend says PUT/PATCH, plan says PATCH is preferred or corrected to PATCH
+        body: {
+          name,
+          description: description ? description : null,
+        },
       });
 
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to update category");
-      }
-
-      setCategories((prev) => prev.map((c) => (c.id === id ? res.data! : c)));
+      setCategories((prev) => prev.map((c) => (c.id === id ? data : c)));
       cancelEdit();
       setSuccess("Category updated successfully.");
     } catch (e) {
@@ -264,9 +188,7 @@ export default function AdminCategoriesPage() {
     setSuccess(null);
 
     try {
-      const res = await delJSON<ApiResponse<null>>(API.remove(c.id));
-      if (!res.success)
-        throw new Error(res.message || "Failed to delete category");
+      await clientApi<null>(API.remove(c.id), { method: "DELETE" });
 
       setCategories((prev) => prev.filter((x) => x.id !== c.id));
       if (editingId === c.id) cancelEdit();

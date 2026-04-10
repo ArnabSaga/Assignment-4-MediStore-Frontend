@@ -74,7 +74,7 @@ export default function ProtectedLayout({
 
             {role === "SELLER" && (
               <Button asChild size="sm" variant="outline">
-                <Link href="/seller">Seller</Link>
+                <Link href="/seller/dashboard">Seller</Link>
               </Button>
             )}
 

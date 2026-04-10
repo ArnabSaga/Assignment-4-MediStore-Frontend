@@ -1,10 +1,11 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -21,12 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type OrderStatus =
-  | "PLACED"
-  | "PROCESSING"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+import { clientApi } from "@/lib/client-api";
+import type { OrderStatus, PaymentStatus } from "@/types/api";
 
 type SellerOrderItemApi = {
   id: string;
@@ -36,11 +33,12 @@ type SellerOrderItemApi = {
   medicine?: {
     id: string;
     name: string;
-    image?: string | null;
+    imageUrl?: string | null;
   } | null;
   order: {
     id: string;
     status: OrderStatus;
+    paymentStatus: PaymentStatus;
     totalAmount: number | string;
     createdAt: string;
     updatedAt: string;
@@ -51,13 +49,6 @@ type SellerOrderItemApi = {
       phone?: string | null;
     } | null;
   };
-};
-
-type ApiListResponse<T> = {
-  success: boolean;
-  message?: string;
-  meta?: { page?: number; limit?: number; total?: number };
-  data?: T;
 };
 
 function toNumber(v: unknown) {
@@ -93,6 +84,21 @@ function clampText(v: string, left = 14, right = 8) {
   return `${v.slice(0, left)}…${v.slice(-right)}`;
 }
 
+function paymentStatusBadgeVariant(status: PaymentStatus) {
+  switch (status) {
+    case "PAID":
+      return "default";
+    case "PENDING":
+      return "secondary";
+    case "FAILED":
+      return "destructive";
+    case "REFUNDED":
+      return "outline";
+    default:
+      return "secondary";
+  }
+}
+
 const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
   { label: "All", value: "ALL" },
   { label: "Placed", value: "PLACED" },
@@ -103,32 +109,13 @@ const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
 ];
 
 async function fetchSellerOrderItems(): Promise<SellerOrderItemApi[]> {
-  const res = await fetch(`/api/v1/seller/orders?limit=200&page=1`, {
-    method: "GET",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-
-  const json = (await res.json().catch(() => null)) as ApiListResponse<
-    SellerOrderItemApi[]
-  > | null;
-
-  if (!res.ok) {
-    const msg = json?.message || `Failed to load orders (${res.status})`;
-    throw new Error(msg);
-  }
-
-  if (!json?.success) {
-    throw new Error(json?.message || "Failed to load orders");
-  }
-
-  return Array.isArray(json.data) ? json.data : [];
+  return clientApi<SellerOrderItemApi[]>("/seller/orders?limit=200&page=1");
 }
 
 type SellerOrderRow = {
   orderId: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
   createdAt: string;
   customerName: string;
   customerEmail: string;
@@ -170,6 +157,7 @@ export default function SellerOrdersPage() {
           map.set(orderId, {
             orderId,
             status: it.order.status,
+            paymentStatus: it.order.paymentStatus,
             createdAt: it.order.createdAt,
             customerName: it.order.customer?.name || "Customer",
             customerEmail: it.order.customer?.email || "",
@@ -180,13 +168,12 @@ export default function SellerOrdersPage() {
           existing.itemsCount += 1;
           existing.total += line;
           existing.status = it.order.status;
+          existing.paymentStatus = it.order.paymentStatus;
           existing.createdAt = it.order.createdAt;
         }
       }
 
-      const list = Array.from(map.values()).sort((a, b) =>
-        a.createdAt < b.createdAt ? 1 : -1
-      );
+      const list = Array.from(map.values()).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
       setRows(list);
 
@@ -210,9 +197,7 @@ export default function SellerOrdersPage() {
       .filter((o) => (status === "ALL" ? true : o.status === status))
       .filter((o) => {
         if (!query) return true;
-        const hay = [o.orderId, o.customerName, o.customerEmail, o.status]
-          .join(" ")
-          .toLowerCase();
+        const hay = [o.orderId, o.customerName, o.customerEmail, o.status, o.paymentStatus].join(" ").toLowerCase();
         return hay.includes(query);
       });
   }, [rows, q, status]);
@@ -232,9 +217,7 @@ export default function SellerOrdersPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Orders</h1>
-          <p className="text-sm text-muted-foreground">
-            View and manage your customer orders.
-          </p>
+          <p className="text-sm text-muted-foreground">View and manage your customer orders.</p>
         </div>
 
         <Button
@@ -249,16 +232,13 @@ export default function SellerOrdersPage() {
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Input
-          placeholder="Search by Order ID, customer name/email, status…"
+          placeholder="Search by Order ID, customer, status, payment…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           className="w-full lg:max-w-md"
         />
 
-        <Select
-          value={status}
-          onValueChange={(v) => setStatus(v as OrderStatus | "ALL")}
-        >
+        <Select value={status} onValueChange={(v) => setStatus(v as OrderStatus | "ALL")}>
           <SelectTrigger className="w-full sm:w-56">
             <SelectValue placeholder="Filter status" />
           </SelectTrigger>
@@ -298,9 +278,17 @@ export default function SellerOrdersPage() {
                   </div>
                 </div>
 
-                <Button asChild size="sm" className="shrink-0 rounded-md">
-                  <Link href={`/seller/orders/${o.orderId}`}>View</Link>
-                </Button>
+                <div className="flex flex-col gap-2 shrink-0">
+                   <Badge
+                    variant={paymentStatusBadgeVariant(o.paymentStatus) as any}
+                    className="text-[10px] h-5 justify-center"
+                  >
+                    {o.paymentStatus}
+                  </Badge>
+                  <Button asChild size="sm" className="rounded-md">
+                    <Link href={`/seller/orders/${o.orderId}`}>View</Link>
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -329,9 +317,7 @@ export default function SellerOrdersPage() {
 
                 <div className="col-span-2 space-y-0.5">
                   <div className="text-xs text-muted-foreground">Created</div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatDate(o.createdAt)}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</div>
                 </div>
               </div>
             </div>
@@ -343,26 +329,27 @@ export default function SellerOrdersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-65">Order</TableHead>
-              <TableHead className="min-w-55">Customer</TableHead>
-              <TableHead className="min-w-35">Status</TableHead>
-              <TableHead className="text-right min-w-35">Total</TableHead>
-              <TableHead className="text-right min-w-27.5">Items</TableHead>
-              <TableHead className="text-right min-w-55">Created</TableHead>
-              <TableHead className="text-right min-w-30">Action</TableHead>
+              <TableHead className="min-w-50">Order</TableHead>
+              <TableHead className="min-w-45">Customer</TableHead>
+              <TableHead className="min-w-30">Status</TableHead>
+              <TableHead className="min-w-30">Payment</TableHead>
+              <TableHead className="text-right min-w-30">Total</TableHead>
+              <TableHead className="text-right min-w-20">Items</TableHead>
+              <TableHead className="text-right min-w-48">Created</TableHead>
+              <TableHead className="text-right min-w-24">Action</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center">
+                <TableCell colSpan={8} className="py-10 text-center">
                   Loading orders…
                 </TableCell>
               </TableRow>
             ) : pageItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center">
+                <TableCell colSpan={8} className="py-10 text-center">
                   No orders found.
                 </TableCell>
               </TableRow>
@@ -371,27 +358,30 @@ export default function SellerOrdersPage() {
                 <TableRow key={o.orderId}>
                   <TableCell className="font-medium">
                     <div className="flex flex-col min-w-0">
-                      <span className="font-mono truncate max-w-90">
-                        {o.orderId}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {o.status}
-                      </span>
+                      <span className="font-mono truncate max-w-65">{o.orderId}</span>
                     </div>
                   </TableCell>
 
                   <TableCell>
                     <div className="flex flex-col min-w-0">
-                      <span className="truncate max-w-65">
-                        {o.customerName}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate max-w-65">
+                      <span className="truncate max-w-45">{o.customerName}</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-45">
                         {o.customerEmail}
                       </span>
                     </div>
                   </TableCell>
 
-                  <TableCell>{o.status}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px] h-5">
+                      {o.status}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell>
+                    <Badge variant={paymentStatusBadgeVariant(o.paymentStatus) as any}>
+                      {o.paymentStatus}
+                    </Badge>
+                  </TableCell>
 
                   <TableCell className="text-right whitespace-nowrap">
                     {formatBDT(o.total)}

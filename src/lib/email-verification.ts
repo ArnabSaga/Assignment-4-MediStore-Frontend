@@ -4,10 +4,10 @@ export async function resendVerificationEmail(
 ) {
   if (!email) throw new Error("Email is required");
 
-  const origin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Use browser origin if available, otherwise fall back to public config
+  const origin = typeof window !== "undefined" 
+    ? window.location.origin 
+    : (process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
 
   const callbackURL = new URL(next, origin).toString();
 
