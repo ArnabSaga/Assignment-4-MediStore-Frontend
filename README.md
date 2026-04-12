@@ -21,7 +21,7 @@
 
 ## 🚀 Why MediStore?
 
-Traditional pharmacy ecosystems often suffer from **fragmented inventory**, a **lack of real-time visibility**, and **clunky digital experiences** that fail both the seller and the customer. 
+Traditional pharmacy ecosystems often suffer from **fragmented inventory**, a **lack of real-time visibility**, and **clunky digital experiences** that fail both the seller and the customer.
 
 MediStore was engineered to solve these core problems by providing a **unified, scalable, and role-driven marketplace**. We bridge the gap between healthcare providers and consumers through:
 - **Real-time Inventory Sync**: Eliminating "Out of Stock" surprises during checkout.
@@ -167,31 +167,37 @@ MediStore is designed to grow from MVP to Enterprise:
 
 ## 🖼️ Screenshots
 
-````carousel
-![Dashboard Overview](./public/github/1.png)
-**Hero View**: The centralized landing page for the marketplace.
-<!-- slide -->
-![Shop Page](./public/github/2.png)
-**Explore**: Real-time filtering and category-based medicine discovery.
-<!-- slide -->
-![Admin Dashboard](./public/github/3.png)
-**Govern**: Administrative control panel for user and category management.
-<!-- slide -->
-![Seller Portal](./public/github/4.png)
-**Manage**: Seller-centric interface for inventory and stock tracking.
-<!-- slide -->
-![Auth Flow](./public/github/5.png)
-**Secure Access**: Unified login and registration system with role selection.
-<!-- slide -->
+### 1. Home Page - Dark Mode
+![Home Page Overview](./public/github/1.png)
+*The centralized landing page for the marketplace.*
+
+### 2. Home Page - Light Mode
+![Home Page Overview](./public/github/2.png)
+*Explore: Real-time filtering and category-based medicine discovery.*
+
+### 3. Shop Page
+![Shop Page Overview](./public/github/3.png)
+*Govern: Administrative control panel for user and category management.*
+
+### 4. Admin Dashboard
+![Admin Dashboard](./public/github/4.png)
+*Manage: Seller-centric interface for inventory and stock tracking.*
+
+### 5. Seller Dashboard
+![Seller Dashboard](./public/github/5.png)
+*Secure Access: Unified login and registration system with role selection.*
+
+### 6. Cart System
 ![Cart System](./public/github/6.png)
-**Order**: Streamlined cart and checkout experience with persistent storage.
-<!-- slide -->
-![Mobile Responsive](./public/github/7.png)
-**Responsive**: Pixel-perfect layout across desktop, tablet, and mobile.
-<!-- slide -->
-![Technical Details](./public/github/8.png)
-**Insights**: Data-driven seller dashboard for tracking sales and growth.
-````
+*Order: Streamlined cart and checkout experience with persistent storage.*
+
+### 7. Cart Page
+![Cart Page](./public/github/7.png)
+*Responsive: Pixel-perfect layout across desktop, tablet, and mobile.*
+
+### 8. Order Details
+![Order Details](./public/github/8.png)
+*Insights: Data-driven seller dashboard for tracking sales and growth.*
 
 ---
 
@@ -204,7 +210,7 @@ MediStore is designed to grow from MVP to Enterprise:
 ### 2. Clone the Repository
 ```bash
 git clone https://github.com/ArnabSaga/Assignment-4-MediStore-Frontend.git
-cd Assignment-4-MediStore-Frontend
+cd MediStore-Frontend
 ```
 
 ### 3. Install Dependencies
