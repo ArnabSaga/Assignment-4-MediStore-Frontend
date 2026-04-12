@@ -1,171 +1,281 @@
-# MediStore 💊 — Frontend
-**A modern Next.js frontend for an online medicine marketplace**
+# MediStore 💊 — Digital Healthcare Platform
 
-MediStore Frontend is a responsive, production-ready **Next.js (App Router)** application that provides the complete user interface for the MediStore online pharmacy platform.
+**A full-stack, production-grade online pharmacy platform built with modern system design principles.**
 
-It supports authentication, product browsing, cart & checkout, seller dashboards, admin management, and order tracking.
+![MediStore Banner](./public/github/1.png)
 
----
-> ⚠️ Demo credentials are for development/testing only.
-
----
-
-## 📌 Project Overview
-
-The MediStore Frontend delivers a complete UI for an OTC medicine marketplace where:
-
-- Customers browse medicines, add to cart, and place orders
-- Sellers manage their medicine inventory and process orders
-- Admins manage users, categories, medicines, and platform orders
-
-This frontend is designed to work seamlessly with the **MediStore Backend API**.
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Vercel](https://img.shields.io/badge/Deployment-Vercel-black?style=for-the-badge&logo=vercel)](https://medi-store-frontend-rhn6xnvoe-arnabsagas-projects.vercel.app)
 
 ---
 
-## 🛠️ Tech Stack
+### 🌐 [Live Demo](https://medi-store-frontend-rhn6xnvoe-arnabsagas-projects.vercel.app) • 📖 [API Documentation](#-api--data-flow) • 🏗️ [Architecture](#-architecture-diagram)
 
-- **Next.js (App Router)** — Server rendering, routing, performance
-- **TypeScript** — Type safety and improved developer experience
-- **pnpm** — Fast, deterministic package manager
-- **Tailwind CSS + PostCSS** — Utility-first styling
-- **shadcn/ui + Sonner** — Accessible UI primitives & notifications
-- **React Context / Store** — Cart and session state management
-- **Fetch / Axios** — Centralized API client layer
+> [!IMPORTANT]
+> **Demo Note**: The production environment is connected to a live staging API. Some transaction features (like real-time delivery tracking) may be simulated for demonstration purposes.
 
 ---
 
-## 🧠 Why These Choices?
+## 🚀 Why MediStore?
 
-- **Next.js + TypeScript** → SEO-friendly, scalable, modern React stack
-- **pnpm** → Faster installs and reduced disk usage
-- **Centralized API layer** → Cleaner components and easier maintenance
-- **Utility-first styling** → Rapid UI development and consistency
+Traditional pharmacy ecosystems often suffer from **fragmented inventory**, a **lack of real-time visibility**, and **clunky digital experiences** that fail both the seller and the customer. 
+
+MediStore was engineered to solve these core problems by providing a **unified, scalable, and role-driven marketplace**. We bridge the gap between healthcare providers and consumers through:
+- **Real-time Inventory Sync**: Eliminating "Out of Stock" surprises during checkout.
+- **Role-Based Workflows**: Tailored interfaces for Customers, Sellers, and Administrators.
+- **Production-Grade Security**: Ensuring patient and transaction data remains encrypted and valid.
 
 ---
 
-## 🧱 Project Architecture
+## 📦 Product Overview
 
-The project follows a modular and scalable structure under the `src` directory.
+MediStore is more than just a storefront; it is a **comprehensive healthcare management system** designed for three distinct user segments:
 
-### Key Directories
+1.  **Customers**: A premium B2C experience for browsing, comparing, and securely purchasing medicines.
+2.  **Sellers**: A robust B2B dashboard for inventory management, order fulfillment, and sales analytics.
+3.  **Administrators**: A governance layer to manage users, verify medicines, and oversee platform health.
 
-```text
-src/
-├─ app/            # Next.js App Router pages & layouts
-├─ components/     # Feature-based reusable components
-├─ lib/            # API clients & utilities
-├─ hooks/          # Custom React hooks
-├─ providers/      # Global context providers
-├─ store/          # Global state (cart, session, etc.)
+---
 
-```
-### 🔄 Typical Request Flow
+## 🧠 System Design Highlights
 
-User interacts with UI components
+The project focuses on **Engineering Excellence** and **Scalable Architecture**:
+- **Multi-Role Architecture**: Strict separation of concerns for different user types.
+- **Stateless API Design**: The frontend communicates with a decoupled backend, ensuring the system is ready for horizontal scaling.
+- **Optimistic UI Logic**: Enhanced UX using **Zustand** for state management, making the interface feel instantaneous during inventory and cart actions.
+- **Strict API Boundary Enforcement**: Every request passes through a centralized validation layer.
 
-Component calls a helper from client-api.ts or server-api.ts
+---
 
-API client sends request to backend (via proxy or base URL)
+## 📊 Role-Based Workflow
 
-Response updates UI state or global store
+| Feature | Customer | Seller | Admin |
+| :--- | :---: | :---: | :---: |
+| Browse & Search | ✅ | ✅ | ✅ |
+| Inventory Management | ❌ | ✅ | ✅ |
+| Order Processing | ❌ | ✅ | ✅ |
+| User Governance | ❌ | ❌ | ✅ |
+| Profile & History | ✅ | ✅ | ✅ |
 
-Errors are handled centrally
+---
 
-🔌 API Expectations
-The frontend expects a RESTful backend API.
+## 🏗️ Architecture Diagram
 
-#### Authentication
-```
-POST /auth/login
+MediStore follows a **Modern Client-Server decoupling** pattern:
 
-POST /auth/register
+```mermaid
+graph TD
+    User["User Browser (Next.js 15)"]
+    Proxy["Auth Proxy / Middleware"]
+    API["Express API Gateway"]
+    DB[(PostgreSQL)]
 
-POST /auth/forgot-password
-
-POST /auth/verify-email
-```
-#### Products & Catalog
-```
-GET /products
-
-GET /products/:id
-
-GET /categories
-```
-#### Cart & Orders
-```
-POST /orders
-
-GET /orders/:id
-```
-#### Seller & Admin
-```
-GET /users (admin)
-
-PATCH /users/:id
-
-GET /seller/orders
+    User -- "1. HTTP Request (Auth Token)" --> Proxy
+    Proxy -- "2. Validated Request" --> API
+    API -- "3. Logic & DB Query" --> DB
+    DB -- "4. Data Payload" --> API
+    API -- "5. JSON Response" --> User
 ```
 
-🔧 Endpoint paths and headers should match your backend implementation.
-Base URL is configured via env.ts / proxy.ts.
+---
 
-#### ✨ Features
-Authentication (login, register, verification)
+## 🔌 API & Data Flow
 
-Product browsing with filters
+Our interaction layer is built for **speed and transparency**. Below is an example of our core authentication flow.
 
-Cart & checkout (Cash on Delivery)
+### POST `/api/auth/login`
 
-Seller dashboard (inventory & orders)
-
-Admin panel (users, categories, orders)
-
-Responsive & accessible UI
-
-#### 🚀 Getting Started
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "••••••••"
+}
 ```
-1️⃣ Clone the Repository
-git clone <frontend-repo-url>
-cd medi-store-frontend
-2️⃣ Install Dependencies
+
+**Response:**
+| Status | Meaning | Description |
+| :--- | :--- | :--- |
+| `200 OK` | **সফল লগইন** | Session token issued via HTTP-only cookie. |
+| `401 Unauthorized` | **ভুল credentials** | Invalid email or password provided. |
+| `422 Unprocessable` | **Validation Error** | Provided data failed Zod schema check. |
+
+---
+
+## ⚡ Performance & Optimization
+
+- **Next.js Server Components (RSC)**: Drastically reduced client-side JavaScript bundle size.
+- **Route-Based Code Splitting**: Loading only the necessary code for the active route.
+- **Zustand State Isolation**: Preventing unnecessary re-renders in complex UI components (e.g., Dashboards).
+- **Planned Upgrade**: Integration of **TanStack Query** for advanced caching and background synchronization.
+
+---
+
+## 📈 Scalability Considerations
+
+MediStore is designed to grow from MVP to Enterprise:
+- **Separation of Concerns**: Frontend and API layers are completely decoupled.
+- **Stateless Design**: Allows for horizontal scaling of the API layer behind a load balancer.
+- **Cachable Assets**: Edge-ready deployment via Vercel for high-speed content delivery.
+- **Microservices Ready**: Core business logic (Order, Auth, Inventory) is architecturally grouped for potential future extraction.
+
+---
+
+## 🔐 Security
+
+- **HTTP-Only Cookies**: Protecting sessions against XSS attacks.
+- **CSRF Protection**: Enforced via SameSite policies and strict origin checking.
+- **RBAC (Role-Based Access Control)**: Middleware-level guarding for `/admin` and `/seller` routes.
+- **Input Sanitization**: Multi-layered validation using **Zod** to prevent injection attacks.
+
+---
+
+## 🧑💻 Developer Experience (DX)
+
+- **Type-Safe APIs**: Full TypeScript integration across the boundary ensures zero "undefined" errors.
+- **Modular Folder Structure**: Feature-based organization for high maintainability.
+- **Reusable UI Primitives**: Component library powered by **shadcn/ui** and **Lucide Icons**.
+- **Clean Codebase**: ESLint and TypeScript strict mode enforced for consistency.
+
+---
+
+## 🌍 Deployment Architecture
+
+- **Frontend**: [Vercel](https://vercel.com) (Edge-optimized Next.js Hosting)
+- **Backend API**: Node.js/Express (API Layer)
+- **Database**: PostgreSQL (Relational persistence)
+
+**Environment Separation**:
+- `Development`: Local environment with strict mock capability.
+- `Production`: High-availability cluster on Vercel and Managed DB.
+
+---
+
+## ⚖️ Why MediStore?
+
+| Feature | Traditional Pharmacy | MediStore |
+| :--- | :---: | :---: |
+| **Inventory** | Manual / Laggy | **Real-time Sync** |
+| **Accessibility** | Physical / Limited | **24/7 Global Access** |
+| **User Roles** | Restricted | **Customer / Seller / Admin** |
+| **Security** | Paper-based | **Encryption & RBAC** |
+
+---
+
+## 🖼️ Screenshots
+
+````carousel
+![Dashboard Overview](./public/github/1.png)
+**Hero View**: The centralized landing page for the marketplace.
+<!-- slide -->
+![Shop Page](./public/github/2.png)
+**Explore**: Real-time filtering and category-based medicine discovery.
+<!-- slide -->
+![Admin Dashboard](./public/github/3.png)
+**Govern**: Administrative control panel for user and category management.
+<!-- slide -->
+![Seller Portal](./public/github/4.png)
+**Manage**: Seller-centric interface for inventory and stock tracking.
+<!-- slide -->
+![Auth Flow](./public/github/5.png)
+**Secure Access**: Unified login and registration system with role selection.
+<!-- slide -->
+![Cart System](./public/github/6.png)
+**Order**: Streamlined cart and checkout experience with persistent storage.
+<!-- slide -->
+![Mobile Responsive](./public/github/7.png)
+**Responsive**: Pixel-perfect layout across desktop, tablet, and mobile.
+<!-- slide -->
+![Technical Details](./public/github/8.png)
+**Insights**: Data-driven seller dashboard for tracking sales and growth.
+````
+
+---
+
+## 🛠️ Setup & Installation
+
+### 1. Prerequisites
+- **Node.js** (v20.0.0 or higher)
+- **pnpm** (v10.0.0 or higher)
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/ArnabSaga/Assignment-4-MediStore-Frontend.git
+cd Assignment-4-MediStore-Frontend
+```
+
+### 3. Install Dependencies
+```bash
 pnpm install
-3️⃣ Environment Variables
-Create a .env.local file:
+```
 
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
-4️⃣ Run Development Server
+### 4. Configuration
+Create a `.env.local` file in the root directory:
+```env
+BACKEND_URL=your_backend_api_url
+NEXT_PUBLIC_API_URL=/api/v1
+NEXT_PUBLIC_AUTH_URL=/api/auth
+```
+
+### 5. Start Development
+```bash
 pnpm dev
-5️⃣ Build for Production
-pnpm build
-pnpm start
-``` 
-#### 🌐 Live Demo
-👉 medi-store-frontend-puce.vercel.app
-(Replace with your deployed URL)
-
-#### 🧭 Future Improvements
-End-to-end tests (Playwright / Cypress)
-
-CI/CD pipelines
-
-Image uploads with signed URLs & CDN
-
-Internationalization (i18n)
-
-Online payment gateway integration
-
-Real-time order notifications
-
-📄 License
-This project is intended for educational, learning, and portfolio purposes.
-
+```
 
 ---
 
-## ✅ Final Notes
+## 🔑 Environment Variables
 
-- This README is **GitHub-standard**
-- Clear for **reviewers, teammates, and recruiters**
-- Fully aligned with **MediStore backend architecture**
-- Safe, professional, and production-ready
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `BACKEND_URL` | Base URL for the backend API | `https://api.medistore.com` |
+| `NEXT_PUBLIC_API_URL` | Public API base path | `/api/v1` |
+| `NEXT_PUBLIC_AUTH_URL`| Auth service base path | `/api/auth` |
+
+---
+
+## 📂 Folder Structure
+
+```bash
+src/
+ ┣ app/             # App Router (Pages, Layouts, Route Groups)
+ ┃ ┣ (auth)/        # Authentication flows
+ ┃ ┣ (protected)/   # Admin and Seller dashboards
+ ┃ ┗ (public)/      # Storefront, Shop, and Marketing
+ ┣ components/      # Feature-scoped UI components
+ ┃ ┣ auth/          # Authentication UI
+ ┃ ┣ dashboard/     # Management interfaces
+ ┃ ┗ ui/            # shadcn/ui shared primitives
+ ┣ lib/             # API Clients, Zustand Stores, & Utils
+ ┣ hooks/           # Custom React Hooks
+ ┣ providers/       # Context Providers (Theme, Auth)
+ ┗ types/           # Global TypeScript Definitions
+```
+
+---
+
+## 🛣️ Future Roadmap
+
+- [ ] **Stripe Integration**: Online payments and automated billing.
+- [ ] **Real-time Tracking**: Live order delivery status via WebSockets.
+- [ ] **AI Recommendations**: Personalized medicine suggestions based on history.
+- [ ] **Prescription Hub**: Encrypted upload and verification portal.
+- [ ] **Mobile App**: Cross-platform React Native companion app.
+
+---
+
+## ⭐ Support the Project
+
+If this project inspired you or helped your workflow, please consider:
+- **Starring** the repository 🌟
+- **Forking** it to build your own version 🍴
+- **Sharing** feedback or opening a PR 🧠
+
+**Let’s build the future of digital healthcare together.**
+
+---
+
+<p align="center">Made with ❤️ by ArnabSaga</p>

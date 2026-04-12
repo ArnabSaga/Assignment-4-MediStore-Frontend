@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
-import { ShoppingCart, Heart, Eye } from "lucide-react";
+import { Eye, Heart, ShoppingCart } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type FeaturedProduct = {
@@ -24,7 +24,7 @@ const products: FeaturedProduct[] = [
     name: "Cef-3 Antibiotic",
     subtitle: "900g Powder for Suspension",
     price: 150.0,
-    image: "/images/medicines/antibiotic-cef-3.webp",
+    image: "/images/medicines/cef-3.webp",
     href: "/shop/p1",
   },
   {
@@ -32,7 +32,7 @@ const products: FeaturedProduct[] = [
     name: "Fexo 180mg",
     subtitle: "10 Tablets / Strip",
     price: 120.0,
-    image: "/images/medicines/allergy-fexo.webp",
+    image: "/images/medicines/fexo.webp",
     href: "/shop/p2",
   },
   {
@@ -152,44 +152,54 @@ export function FeaturedProducts({
 
                     {/* Action Overlays (Desktop Only) */}
                     <div className="absolute inset-0 bg-black/5 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden md:flex">
-                         <div className="flex gap-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                            <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors">
-                                <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors">
-                                <Heart className="h-4 w-4" />
-                            </Button>
-                         </div>
+                      <div className="flex gap-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="h-10 w-10 rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="h-10 w-10 rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors"
+                        >
+                          <Heart className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Badge */}
                     <div className="absolute left-3 top-3">
-                        <span className="rounded-full bg-primary/95 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg backdrop-blur-sm">
-                            Premium
-                        </span>
+                      <span className="rounded-full bg-primary/95 px-2.5 py-1 text-[10px] font-bold text-white dark:text-black shadow-lg backdrop-blur-sm">
+                        Premium
+                      </span>
                     </div>
                   </div>
 
                   {/* Product Info */}
                   <div className="p-4 md:p-5">
                     <div className="mb-4 h-12">
-                        <Link href={p.href} className="block group/link">
-                            <h3 className="line-clamp-2 text-sm font-bold tracking-tight group-hover/link:text-primary transition-colors">
-                                {p.name}
-                            </h3>
-                            {p.subtitle && (
-                                <p className="mt-1 line-clamp-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                                    {p.subtitle}
-                                </p>
-                            )}
-                        </Link>
+                      <Link href={p.href} className="block group/link">
+                        <h3 className="line-clamp-2 text-sm font-bold tracking-tight group-hover/link:text-primary transition-colors">
+                          {p.name}
+                        </h3>
+                        {p.subtitle && (
+                          <p className="mt-1 line-clamp-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            {p.subtitle}
+                          </p>
+                        )}
+                      </Link>
                     </div>
 
                     <div className="flex items-center justify-between gap-4 mt-2">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground leading-tight tracking-wider">Price</span>
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground leading-tight tracking-wider">
+                          Price
+                        </span>
                         <p className="text-base font-bold text-foreground">
-                            {formatPrice(p.price)}
+                          {formatPrice(p.price)}
                         </p>
                       </div>
 
@@ -198,7 +208,9 @@ export function FeaturedProducts({
                         className="h-9 w-9 p-0 rounded-full bg-zinc-100 text-zinc-900 hover:bg-primary hover:text-white dark:bg-zinc-800 dark:text-zinc-100 md:h-10 md:w-auto md:px-4 md:gap-2 transition-all shadow-sm"
                       >
                         <ShoppingCart className="h-4 w-4" />
-                        <span className="hidden md:inline font-bold text-xs uppercase tracking-wide">Add</span>
+                        <span className="hidden md:inline font-bold text-xs uppercase tracking-wide">
+                          Add
+                        </span>
                       </Button>
                     </div>
                   </div>
@@ -210,10 +222,10 @@ export function FeaturedProducts({
 
         {/* Footer CTA */}
         <motion.div
-           initial={{ opacity: 0 }}
-           whileInView={{ opacity: 1 }}
-           viewport={{ once: true }}
-           className="mt-12 flex flex-col items-center justify-center text-center"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="mt-12 flex flex-col items-center justify-center text-center"
         >
           <Button
             asChild
@@ -224,7 +236,7 @@ export function FeaturedProducts({
             <Link href={viewAllHref}>Explore full catalogue</Link>
           </Button>
           <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-             Trusted by over 10,000+ customers
+            Trusted by over 10,000+ customers
           </p>
         </motion.div>
       </div>
