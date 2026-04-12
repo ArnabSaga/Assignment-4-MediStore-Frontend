@@ -1,25 +1,30 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 type Role = "CUSTOMER" | "SELLER" | "ADMIN";
-type OrderStatus =
-  | "PLACED"
-  | "PROCESSING"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+type OrderStatus = "PLACED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
-type ApiResponse<T> = { success: boolean; message?: string; data?: T };
+type ApiResponse<T> = {
+  success: boolean;
+  message?: string;
+  data?: T;
+};
+
 type ApiListResponse<T> = {
   success: boolean;
   message?: string;
-  meta?: { page?: number; limit?: number };
+  meta?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+  };
   data?: T;
 };
 
@@ -44,10 +49,10 @@ type Category = { id: string; name: string; slug: string };
 type Medicine = { id: string; name: string; price: number; createdAt: string };
 
 const API = {
-  adminUsers: "/api/v1/admin/users",
-  adminOrders: "/api/v1/admin/orders?limit=1000&page=1",
-  categories: "/api/v1/categories",
-  medicines: "/api/v1/medicines?limit=1000&page=1",
+  adminUsers: "/api/v1/admin/users?limit=100&page=1",
+  adminOrders: "/api/v1/admin/orders?limit=100&page=1",
+  categories: "/api/v1/categories?limit=100&page=1",
+  medicines: "/api/v1/medicines?limit=100&page=1",
 } as const;
 
 async function getJSON<T>(url: string): Promise<T> {
@@ -63,6 +68,7 @@ async function getJSON<T>(url: string): Promise<T> {
   if (!res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
   }
+
   return json as T;
 }
 
@@ -88,9 +94,7 @@ export default function AdminDashboardPage() {
   const [bannedCount, setBannedCount] = React.useState(0);
 
   const [orderCount, setOrderCount] = React.useState(0);
-  const [orderTotals, setOrderTotals] = React.useState<
-    Record<OrderStatus, number>
-  >({
+  const [orderTotals, setOrderTotals] = React.useState<Record<OrderStatus, number>>({
     PLACED: 0,
     PROCESSING: 0,
     SHIPPED: 0,
@@ -107,22 +111,25 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      const [usersRes, ordersRes, categoriesRes, medicinesRes] =
-        await Promise.all([
-          getJSON<ApiResponse<User[]>>(API.adminUsers),
-          getJSON<ApiListResponse<Order[]>>(API.adminOrders),
-          getJSON<ApiResponse<Category[]>>(API.categories),
-          getJSON<ApiListResponse<Medicine[]>>(API.medicines),
-        ]);
+      const [usersRes, ordersRes, categoriesRes, medicinesRes] = await Promise.all([
+        getJSON<ApiListResponse<User[]>>(API.adminUsers),
+        getJSON<ApiListResponse<Order[]>>(API.adminOrders),
+        getJSON<ApiListResponse<Category[]>>(API.categories),
+        getJSON<ApiListResponse<Medicine[]>>(API.medicines),
+      ]);
 
-      if (!usersRes.success)
+      if (!usersRes.success) {
         throw new Error(usersRes.message || "Failed to load users");
-      if (!ordersRes.success)
+      }
+      if (!ordersRes.success) {
         throw new Error(ordersRes.message || "Failed to load orders");
-      if (!categoriesRes.success)
+      }
+      if (!categoriesRes.success) {
         throw new Error(categoriesRes.message || "Failed to load categories");
-      if (!medicinesRes.success)
+      }
+      if (!medicinesRes.success) {
         throw new Error(medicinesRes.message || "Failed to load medicines");
+      }
 
       const users = usersRes.data ?? [];
       const orders = ordersRes.data ?? [];
@@ -130,13 +137,14 @@ export default function AdminDashboardPage() {
       const medicines = medicinesRes.data ?? [];
 
       // Users
-      setUserCount(users.length);
+      setUserCount(usersRes.meta?.total ?? users.length);
       setSellerCount(users.filter((u) => u.role === "SELLER").length);
       setCustomerCount(users.filter((u) => u.role === "CUSTOMER").length);
       setBannedCount(users.filter((u) => u.isBanned).length);
 
       // Orders
-      setOrderCount(orders.length);
+      setOrderCount(ordersRes.meta?.total ?? orders.length);
+
       const statusCounts: Record<OrderStatus, number> = {
         PLACED: 0,
         PROCESSING: 0,
@@ -144,17 +152,19 @@ export default function AdminDashboardPage() {
         DELIVERED: 0,
         CANCELLED: 0,
       };
+
       let total = 0;
       for (const o of orders) {
         statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1;
         total += Number(o.totalAmount || 0);
       }
+
       setOrderTotals(statusCounts);
       setRevenue(total);
 
-      // Catalog
-      setCategoryCount(categories.length);
-      setMedicineCount(medicines.length);
+      // Catalogue
+      setCategoryCount(categoriesRes.meta?.total ?? categories.length);
+      setMedicineCount(medicinesRes.meta?.total ?? medicines.length);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load dashboard");
     } finally {
@@ -173,11 +183,7 @@ export default function AdminDashboardPage() {
           <h1 className="text-xl font-semibold">Admin Dashboard</h1>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={() => void load()}
-          disabled={loading}
-        >
+        <Button variant="outline" onClick={() => void load()} disabled={loading}>
           Refresh
         </Button>
       </div>
@@ -192,17 +198,14 @@ export default function AdminDashboardPage() {
         <div className="rounded-lg border p-6">Loading dashboard…</div>
       ) : (
         <>
-          {/* Top stats */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Total Users
-                </CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Total Users</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold">{userCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Sellers: {sellerCount} • Customers: {customerCount}
                 </p>
               </CardContent>
@@ -210,13 +213,11 @@ export default function AdminDashboardPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Banned Users
-                </CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Banned Users</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold">{bannedCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Active: {Math.max(userCount - bannedCount, 0)}
                 </p>
               </CardContent>
@@ -224,13 +225,11 @@ export default function AdminDashboardPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Total Orders
-                </CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Total Orders</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold">{orderCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Revenue (sum): {fmtBDT(revenue)}
                 </p>
               </CardContent>
@@ -238,20 +237,15 @@ export default function AdminDashboardPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Catalogue
-                </CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Catalogue</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold">{medicineCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Categories: {categoryCount}
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Categories: {categoryCount}</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Orders breakdown + quick links */}
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -259,9 +253,7 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {(
-                    Object.keys(orderTotals) as Array<keyof typeof orderTotals>
-                  ).map((k) => (
+                  {(Object.keys(orderTotals) as Array<keyof typeof orderTotals>).map((k) => (
                     <div key={k} className="rounded-md border p-3">
                       <p className="text-xs text-muted-foreground">{k}</p>
                       <p className="text-lg font-semibold">{orderTotals[k]}</p>
@@ -295,9 +287,7 @@ export default function AdminDashboardPage() {
               <CardContent className="space-y-3">
                 <div className="rounded-md border p-3">
                   <p className="text-sm font-medium">Review Users</p>
-                  <p className="text-xs text-muted-foreground">
-                    Ban/unban and role changes.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Ban/unban and role changes.</p>
                   <Button asChild size="sm" className="mt-2 w-full">
                     <Link href="/admin/users">Open</Link>
                   </Button>
@@ -305,15 +295,8 @@ export default function AdminDashboardPage() {
 
                 <div className="rounded-md border p-3">
                   <p className="text-sm font-medium">Monitor Orders</p>
-                  <p className="text-xs text-muted-foreground">
-                    Update order status quickly.
-                  </p>
-                  <Button
-                    asChild
-                    size="sm"
-                    className="mt-2 w-full"
-                    variant="outline"
-                  >
+                  <p className="text-xs text-muted-foreground">Update order status quickly.</p>
+                  <Button asChild size="sm" className="mt-2 w-full" variant="outline">
                     <Link href="/admin/orders">Open</Link>
                   </Button>
                 </div>

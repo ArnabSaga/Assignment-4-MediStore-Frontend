@@ -1,4 +1,4 @@
-import CheckEmailClient from '@/components/auth/CheckEmailClient';
+import CheckEmailClient from "@/components/auth/CheckEmailClient";
 import * as React from "react";
 
 export default function Page() {

@@ -1,8 +1,7 @@
-import * as React from "react";
+import RegisterClient from "@/components/auth/RegisterClient";
 import Image from "next/image";
 import Link from "next/link";
-import RegisterClient from '@/components/auth/RegisterClient';
-
+import * as React from "react";
 
 export default function RegisterPage() {
   return (

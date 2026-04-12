@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -11,12 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type OrderStatus =
-  | "PLACED"
-  | "PROCESSING"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+type OrderStatus = "PLACED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
 type SellerMedicine = {
   id: string;
@@ -137,9 +132,9 @@ async function backendFetch<T>(path: string): Promise<T> {
 
 export default async function SellerDashboardPage() {
   const [medRes, orderRes] = await Promise.all([
-    backendFetch<ApiResponse<SellerMedicine[]>>("/api/v1/seller/medicines"),
+    backendFetch<ApiResponse<SellerMedicine[]>>("/api/v1/seller/medicines?limit=100&page=1"),
     backendFetch<ApiResponse<SellerOrderItem[]>>(
-      "/api/v1/seller/orders?page=1&limit=200&sortBy=createdAt&sortOrder=desc"
+      "/api/v1/seller/orders?page=1&limit=100&sortBy=createdAt&sortOrder=desc"
     ),
   ]);
 
@@ -210,9 +205,7 @@ export default async function SellerDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Seller Dashboard
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Seller Dashboard</h1>
         <p className="text-sm text-muted-foreground">
           Quick overview of your medicines and orders.
         </p>
@@ -225,9 +218,7 @@ export default async function SellerDashboardPage() {
               Revenue (This Month)
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {money(revenueThisMonth)}
-          </CardContent>
+          <CardContent className="text-2xl font-semibold">{money(revenueThisMonth)}</CardContent>
         </Card>
 
         <Card className="card-surface">
@@ -238,9 +229,7 @@ export default async function SellerDashboardPage() {
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
             {totalMedicines}
-            <span className="ml-2 text-sm text-muted-foreground">
-              ({activeMedicines} active)
-            </span>
+            <span className="ml-2 text-sm text-muted-foreground">({activeMedicines} active)</span>
           </CardContent>
         </Card>
 
@@ -252,9 +241,7 @@ export default async function SellerDashboardPage() {
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
             {pendingOrders}
-            <span className="ml-2 text-sm text-muted-foreground">
-              / {totalOrders}
-            </span>
+            <span className="ml-2 text-sm text-muted-foreground">/ {totalOrders}</span>
           </CardContent>
         </Card>
 
@@ -264,9 +251,7 @@ export default async function SellerDashboardPage() {
               Out of Stock
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {outOfStock}
-          </CardContent>
+          <CardContent className="text-2xl font-semibold">{outOfStock}</CardContent>
         </Card>
       </div>
 
@@ -293,19 +278,13 @@ export default async function SellerDashboardPage() {
                   <TableBody>
                     {recentOrders.map((o) => (
                       <TableRow key={o.orderId}>
-                        <TableCell className="font-medium">
-                          #{o.orderId.slice(0, 8)}
-                        </TableCell>
+                        <TableCell className="font-medium">#{o.orderId.slice(0, 8)}</TableCell>
                         <TableCell className="max-w-45 truncate">
                           {o.customerName || o.customerEmail || "—"}
                         </TableCell>
                         <TableCell>{statusBadge(o.status)}</TableCell>
-                        <TableCell className="text-right">
-                          {money(o.sellerTotal)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatDate(o.createdAt)}
-                        </TableCell>
+                        <TableCell className="text-right">{money(o.sellerTotal)}</TableCell>
+                        <TableCell className="text-right">{formatDate(o.createdAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -321,9 +300,7 @@ export default async function SellerDashboardPage() {
           </CardHeader>
           <CardContent>
             {lowStockMedicines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No low stock items 🎉
-              </p>
+              <p className="text-sm text-muted-foreground">No low stock items 🎉</p>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -339,17 +316,11 @@ export default async function SellerDashboardPage() {
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{m.name}</TableCell>
                         <TableCell className="text-right">
-                          <Badge
-                            variant={
-                              m.stock === 0 ? "destructive" : "secondary"
-                            }
-                          >
+                          <Badge variant={m.stock === 0 ? "destructive" : "secondary"}>
                             {m.stock}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          {money(toNumber(m.price))}
-                        </TableCell>
+                        <TableCell className="text-right">{money(toNumber(m.price))}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

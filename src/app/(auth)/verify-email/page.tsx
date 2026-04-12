@@ -1,4 +1,4 @@
-import VerifyEmailClient from '@/components/auth/VerifyEmailClient';
+import VerifyEmailClient from "@/components/auth/VerifyEmailClient";
 import * as React from "react";
 
 export default function VerifyEmailPage() {
