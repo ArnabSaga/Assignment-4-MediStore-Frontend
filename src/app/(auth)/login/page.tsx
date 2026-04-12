@@ -1,9 +1,7 @@
-import * as React from "react";
+import LoginClient from "@/components/auth/LoginClient";
 import Image from "next/image";
 import Link from "next/link";
-import LoginClient from '@/components/auth/LoginClient';
-
-
+import * as React from "react";
 
 export default function LoginPage() {
   return (
@@ -82,8 +80,7 @@ export default function LoginPage() {
           <div className="max-w-sm rounded-2xl border border-border bg-card/70 p-6 backdrop-blur">
             <p className="text-sm font-medium">Trusted OTC marketplace</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Genuine products, clear categories, and a smooth checkout
-              experience.
+              Genuine products, clear categories, and a smooth checkout experience.
             </p>
           </div>
         </div>

@@ -159,12 +159,14 @@
     overflow-x: hidden;
     overflow-y: scroll;
     font-family: var(--font-inter);
-    font-feature-settings: "liga" 1, "calt" 1;
+    font-feature-settings:
+      "liga" 1,
+      "calt" 1;
     --removed-body-scroll-bar-size: 0px;
   }
 
   body[data-scroll-locked] {
-     padding-right: 0 !important;
+    padding-right: 0 !important;
     margin-right: 0 !important;
   }
 
@@ -220,8 +222,7 @@
   textarea:focus-visible,
   select:focus-visible {
     border-color: var(--button-primary);
-    box-shadow: 0 0 0 3px
-      color-mix(in oklab, var(--button-primary) 35%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--button-primary) 35%, transparent);
   }
 }
 
@@ -244,20 +245,17 @@
   .btn-primary:hover {
     background-color: var(--button-primary) !important;
     filter: brightness(1.06);
-    box-shadow: 0 10px 28px -14px
-      color-mix(in oklab, var(--button-primary) 70%, transparent);
+    box-shadow: 0 10px 28px -14px color-mix(in oklab, var(--button-primary) 70%, transparent);
   }
 
   .btn-primary:active {
     transform: translateY(1px) scale(0.98);
-    box-shadow: 0 6px 16px -12px
-      color-mix(in oklab, var(--button-primary) 55%, transparent);
+    box-shadow: 0 6px 16px -12px color-mix(in oklab, var(--button-primary) 55%, transparent);
   }
 
   /* OUTLINE BUTTON */
   .btn-outline {
-    border: 1px solid
-      color-mix(in oklab, var(--button-primary) 70%, var(--border));
+    border: 1px solid color-mix(in oklab, var(--button-primary) 70%, var(--border));
     color: var(--foreground);
     background: transparent;
     transition:
@@ -268,11 +266,7 @@
   }
 
   .btn-outline:hover {
-    background-color: color-mix(
-      in oklab,
-      var(--button-accent) 18%,
-      transparent
-    );
+    background-color: color-mix(in oklab, var(--button-accent) 18%, transparent);
     border-color: var(--button-accent);
   }
 
@@ -339,7 +333,7 @@
   .interactive-hover {
     @apply transition-all duration-200 ease-out;
   }
-  
+
   .interactive-hover:hover {
     @apply -translate-y-0.5 shadow-md;
   }
@@ -362,8 +356,157 @@
     content: "";
     position: absolute;
     inset: -20px;
-    background: radial-gradient(circle at center, rgba(var(--glow-color), var(--glow-opacity)) 0%, transparent 70%);
+    background: radial-gradient(
+      circle at center,
+      rgba(var(--glow-color), var(--glow-opacity)) 0%,
+      transparent 70%
+    );
     z-index: -1;
     pointer-events: none;
+  }
+
+  .shop-shell {
+    @apply relative;
+  }
+
+  .shop-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklab, var(--button-primary) 10%, transparent) 0%,
+        transparent 35%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        color-mix(in oklab, var(--button-accent) 12%, transparent) 0%,
+        transparent 30%
+      );
+    opacity: 0.9;
+  }
+
+  .shop-panel {
+    @apply rounded-[1.25rem] border border-border/70 shadow-sm backdrop-blur-xl;
+    background: color-mix(in oklab, var(--card) 88%, transparent);
+  }
+
+  .dark .shop-panel {
+    background: color-mix(in oklab, var(--card) 82%, transparent);
+    border-color: color-mix(in oklab, var(--border) 82%, transparent);
+  }
+
+  html:not(.dark) .shop-panel {
+    background: color-mix(in oklab, white 78%, var(--card));
+    border-color: color-mix(in oklab, var(--border) 78%, transparent);
+  }
+
+  .shop-soft-border {
+    border-color: color-mix(in oklab, var(--border) 78%, transparent);
+  }
+
+  .shop-chip {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200;
+    border-color: color-mix(in oklab, var(--border) 80%, transparent);
+    background: color-mix(in oklab, var(--card) 75%, transparent);
+  }
+
+  .shop-chip-active {
+    color: white;
+    border-color: transparent;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--button-primary) 88%, white 0%),
+      color-mix(in oklab, var(--button-accent) 78%, black 0%)
+    );
+    box-shadow: 0 12px 28px -16px color-mix(in oklab, var(--button-primary) 60%, transparent);
+  }
+
+  .shop-search {
+    @apply h-12 rounded-2xl border pl-11 pr-4 shadow-none backdrop-blur-md transition-all duration-200;
+    background: color-mix(in oklab, var(--card) 80%, transparent);
+    border-color: color-mix(in oklab, var(--border) 82%, transparent);
+  }
+
+  .shop-search:focus-visible {
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--button-primary) 18%, transparent);
+  }
+
+  .shop-filter-link {
+    @apply flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200;
+  }
+
+  .shop-filter-link:hover {
+    background: color-mix(in oklab, var(--muted) 88%, transparent);
+    transform: translateX(2px);
+  }
+
+  .shop-filter-link-active {
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--button-primary) 14%, var(--card));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--button-primary) 26%, transparent);
+  }
+
+  .shop-product-card {
+    @apply overflow-hidden rounded-[1.35rem] border transition-all duration-300;
+    border-color: color-mix(in oklab, var(--border) 80%, transparent);
+    background: color-mix(in oklab, var(--card) 88%, transparent);
+    box-shadow:
+      0 10px 30px -18px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .shop-product-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 22px 50px -24px rgba(0, 0, 0, 0.28),
+      0 10px 30px -18px color-mix(in oklab, var(--button-primary) 18%, transparent);
+  }
+
+  .shop-image-shell {
+    @apply relative aspect-square overflow-hidden;
+    background:
+      radial-gradient(
+        circle at top,
+        color-mix(in oklab, var(--button-primary) 8%, transparent),
+        transparent 45%
+      ),
+      color-mix(in oklab, var(--muted) 72%, transparent);
+  }
+
+  .shop-image-overlay {
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.04));
+  }
+
+  .group:hover .shop-image-overlay {
+    opacity: 1;
+  }
+
+  .shop-price {
+    @apply text-base font-semibold tracking-tight md:text-lg;
+  }
+
+  .shop-subtle {
+    @apply text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .shop-empty {
+    @apply rounded-3xl border border-dashed p-10 text-center md:p-14;
+    border-color: color-mix(in oklab, var(--border) 72%, transparent);
+    background:
+      radial-gradient(
+        circle at top,
+        color-mix(in oklab, var(--button-primary) 7%, transparent),
+        transparent 42%
+      ),
+      color-mix(in oklab, var(--card) 72%, transparent);
+  }
+
+  .shop-sticky-offset {
+    top: 6.25rem;
   }
 }

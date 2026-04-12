@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-        pathname: "/**",
+        hostname: "res.cloudinary.com",
+        pathname: "/dsihef3wi/image/upload/**",
       },
     ],
   },
