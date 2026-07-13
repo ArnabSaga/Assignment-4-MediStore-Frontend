@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -98,8 +99,7 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
         toast.success("Medicine created ✅", { id: t });
         router.push("/seller/medicines");
         router.refresh();
-      } catch (err) {
-        console.log(err);
+      } catch {
         toast.error("Something went wrong", { id: t });
       } finally {
         setPending(false);
@@ -239,10 +239,12 @@ export function CreateMedicineForm({ categories }: { categories: Category[] }) {
                     <div className="flex flex-col gap-3">
                       {field.state.value && (
                         <div className="relative h-40 w-full overflow-hidden rounded-md border border-border bg-muted">
-                          <img
+                          <Image
                             src={field.state.value}
                             alt="Preview"
-                            className="h-full w-full object-contain"
+                            fill
+                            sizes="100vw"
+                            className="object-contain"
                           />
                           <Button
                             type="button"

@@ -6,15 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
 import {
   Select,
@@ -32,6 +24,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+} from "@/components/dashboard";
 
 type Category = {
   id: string;
@@ -59,8 +55,42 @@ type ApiResponse<T> = {
   success: boolean;
   message?: string;
   data?: T;
-  meta?: any;
+  meta?: Record<string, unknown>;
 };
+
+type ApiErrorBody = {
+  message?: string;
+  error?: string;
+};
+
+type RawMedicine = Partial<
+  Omit<
+    Medicine,
+    "id" | "name" | "slug" | "createdAt" | "updatedAt" | "price" | "stock" | "isActive" | "category" | "seller"
+  >
+> & {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
+  price?: unknown;
+  stock?: unknown;
+  isActive?: unknown;
+  category?: Category | null;
+  seller?: { id: string; name: string } | null;
+};
+
+type MedicinePatch = Partial<{
+  name: string;
+  manufacturer: string;
+  price: number;
+  stock: number;
+  isActive: boolean;
+  categoryId: string;
+  imageUrl: string | null;
+  description: string | null;
+}>;
 
 const API = {
   categories: "/api/v1/categories",
@@ -103,7 +133,7 @@ async function readJSON<T>(url: string): Promise<T> {
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as any;
+  const json = (await res.json().catch(() => null)) as ApiErrorBody | null;
   if (!res.ok)
     throw new Error(json?.message || `Request failed (${res.status})`);
   return json as T;
@@ -118,7 +148,7 @@ async function putJSON<T>(url: string, body: unknown): Promise<T> {
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as any;
+  const json = (await res.json().catch(() => null)) as ApiErrorBody | null;
   if (!res.ok)
     throw new Error(json?.message || `Request failed (${res.status})`);
   return json as T;
@@ -132,13 +162,13 @@ async function delJSON<T>(url: string): Promise<T> {
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as any;
+  const json = (await res.json().catch(() => null)) as ApiErrorBody | null;
   if (!res.ok)
     throw new Error(json?.message || `Request failed (${res.status})`);
   return json as T;
 }
 
-function normalizeMedicine(raw: any): Medicine {
+function normalizeMedicine(raw: RawMedicine): Medicine {
   return {
     id: raw.id,
     name: raw.name,
@@ -175,6 +205,24 @@ function statusPill(active: boolean) {
       {active ? "ACTIVE" : "INACTIVE"}
     </span>
   );
+}
+
+function stockTone(stock: number) {
+  if (stock <= 0) {
+    return "border-destructive/30 bg-destructive/10 text-destructive";
+  }
+
+  if (stock <= 10) {
+    return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  }
+
+  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+}
+
+function stockLabel(stock: number) {
+  if (stock <= 0) return "Out of stock";
+  if (stock <= 10) return "Low stock";
+  return "In stock";
 }
 
 export default function AdminMedicinesPage() {
@@ -224,7 +272,7 @@ export default function AdminMedicinesPage() {
       if (search.trim()) params.set("search", search.trim());
       if (categoryId !== "ALL") params.set("categoryId", categoryId);
 
-      const medRes = await readJSON<ApiResponse<any[]>>(
+      const medRes = await readJSON<ApiResponse<RawMedicine[]>>(
         API.medicines(params.toString())
       );
       if (!medRes.success)
@@ -291,7 +339,7 @@ export default function AdminMedicinesPage() {
     setSuccess(null);
 
     try {
-      const payload: any = {};
+      const payload: MedicinePatch = {};
 
       const name = eName.trim();
       const manufacturer = eManufacturer.trim();
@@ -328,7 +376,7 @@ export default function AdminMedicinesPage() {
         return;
       }
 
-      const res = await putJSON<ApiResponse<any>>(
+      const res = await putJSON<ApiResponse<RawMedicine>>(
         API.adminMedicine(current.id),
         payload
       );
@@ -373,12 +421,12 @@ export default function AdminMedicinesPage() {
   const isRowBusy = (id: string) => busyId === id;
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Medicines</h1>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Medicines"
+        description="Moderate public catalogue listings, stock, and seller-owned medicine details."
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Medicines" }]}
+        actions={
         <Button
           variant="outline"
           onClick={() => void load()}
@@ -386,41 +434,53 @@ export default function AdminMedicinesPage() {
         >
           Refresh
         </Button>
-      </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+        <div className="dashboard-panel border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       {success ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel p-4">
           <p className="text-sm">{success}</p>
         </div>
       ) : null}
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Filters</CardTitle>
+      <Card className="dashboard-panel">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Catalogue controls</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Search by medicine details or narrow the list by category.
+              </p>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Page <span className="font-medium text-foreground">{page}</span> •{" "}
+              <span className="font-medium text-foreground">{limit}</span> per page
+            </div>
+          </div>
         </CardHeader>
 
-        <CardContent className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <CardContent>
+          <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_240px_auto] lg:items-center">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, manufacturer, description…"
-            className="w-full lg:max-w-md"
+            className="w-full"
             disabled={loading}
           />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Select
               value={categoryId}
               onValueChange={setCategoryId}
               disabled={loading}
             >
-              <SelectTrigger className="w-full sm:w-56">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -433,7 +493,7 @@ export default function AdminMedicinesPage() {
               </SelectContent>
             </Select>
 
-            <div className="flex justify-end gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
               <Button
                 variant="outline"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -453,20 +513,15 @@ export default function AdminMedicinesPage() {
             </div>
           </div>
         </CardContent>
-
-        <div className="px-6 pb-4 text-xs text-muted-foreground">
-          Page: <span className="font-medium">{page}</span> • Showing{" "}
-          <span className="font-medium">{limit}</span> per page
-        </div>
       </Card>
 
-      <div className="grid gap-3 md:hidden">
+      <div className="grid gap-3 xl:hidden">
         {loading ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             Loading medicines…
           </div>
         ) : medicines.length === 0 ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             No medicines found.
           </div>
         ) : (
@@ -474,7 +529,7 @@ export default function AdminMedicinesPage() {
             const busy = isRowBusy(m.id);
 
             return (
-              <div key={m.id} className="rounded-2xl border p-4 space-y-3">
+              <div key={m.id} className="dashboard-mobile-card space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-semibold truncate">{m.name}</div>
@@ -547,98 +602,99 @@ export default function AdminMedicinesPage() {
         )}
       </div>
 
-      <div className="hidden md:block rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-65">Medicine</TableHead>
-              <TableHead className="min-w-45">Category</TableHead>
-              <TableHead className="min-w-45">Manufacturer</TableHead>
-              <TableHead className="text-right min-w-27.5">Price</TableHead>
-              <TableHead className="text-right min-w-22.5">Stock</TableHead>
-              <TableHead className="min-w-45">Seller</TableHead>
-              <TableHead className="text-right min-w-45">Created</TableHead>
-              <TableHead className="text-right min-w-55">Action</TableHead>
-            </TableRow>
-          </TableHeader>
+      <DashboardPanel className="hidden p-0 xl:block">
+        <div className="divide-y">
+          <div className="grid grid-cols-[minmax(260px,1.35fr)_minmax(150px,0.75fr)_minmax(190px,1fr)_minmax(100px,0.55fr)_minmax(120px,0.65fr)_minmax(150px,0.8fr)_auto] gap-4 px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div>Medicine</div>
+            <div>Category</div>
+            <div>Manufacturer</div>
+            <div>Price</div>
+            <div>Stock</div>
+            <div>Seller</div>
+            <div className="text-right">Action</div>
+          </div>
 
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center">
-                  Loading medicines…
-                </TableCell>
-              </TableRow>
-            ) : medicines.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center">
-                  No medicines found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              medicines.map((m) => {
-                const busy = isRowBusy(m.id);
+          {loading ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              Loading medicines…
+            </div>
+          ) : medicines.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              No medicines found.
+            </div>
+          ) : (
+            medicines.map((m) => {
+              const busy = isRowBusy(m.id);
 
-                return (
-                  <TableRow key={m.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate">{m.name}</span>
-                        <span className="text-[11px] text-muted-foreground truncate font-mono max-w-95">
-                          {m.id}
-                        </span>
-                        <div className="mt-1">{statusPill(m.isActive)}</div>
-                      </div>
-                    </TableCell>
+              return (
+                <div
+                  key={m.id}
+                  className="grid grid-cols-[minmax(260px,1.35fr)_minmax(150px,0.75fr)_minmax(190px,1fr)_minmax(100px,0.55fr)_minmax(120px,0.65fr)_minmax(150px,0.8fr)_auto] items-center gap-4 px-5 py-4"
+                >
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium">{m.name}</span>
+                      {statusPill(m.isActive)}
+                    </div>
+                    <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                      {m.id}
+                    </div>
+                    <div className="mt-1 truncate text-xs text-muted-foreground">
+                      Created {formatDate(m.createdAt)}
+                    </div>
+                  </div>
 
-                    <TableCell className="text-sm text-muted-foreground">
-                      {m.category?.name ?? "—"}
-                    </TableCell>
+                  <div className="min-w-0 truncate text-sm text-muted-foreground">
+                    {m.category?.name ?? "—"}
+                  </div>
 
-                    <TableCell className="text-sm">{m.manufacturer}</TableCell>
+                  <div className="min-w-0 truncate text-sm">
+                    {m.manufacturer || "—"}
+                  </div>
 
-                    <TableCell className="text-right">
-                      {fmtBDT(m.price)}
-                    </TableCell>
+                  <div className="whitespace-nowrap text-sm font-semibold">
+                    {fmtBDT(m.price)}
+                  </div>
 
-                    <TableCell className="text-right">{m.stock}</TableCell>
+                  <div>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${stockTone(
+                        m.stock
+                      )}`}
+                    >
+                      {m.stock} • {stockLabel(m.stock)}
+                    </span>
+                  </div>
 
-                    <TableCell className="text-sm text-muted-foreground">
-                      {m.seller?.name ?? "—"}
-                    </TableCell>
+                  <div className="min-w-0 truncate text-sm text-muted-foreground">
+                    {m.seller?.name ?? "—"}
+                  </div>
 
-                    <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                      {formatDate(m.createdAt)}
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEdit(m)}
-                          disabled={busy || !!busyId}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => void onDelete(m)}
-                          disabled={busy || !!busyId}
-                          className="text-black dark:text-white"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEdit(m)}
+                      disabled={busy || !!busyId}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => void onDelete(m)}
+                      disabled={busy || !!busyId}
+                      className="text-black dark:text-white"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DashboardPanel>
 
       <Separator />
 
@@ -722,7 +778,9 @@ export default function AdminMedicinesPage() {
                 <p className="text-xs text-muted-foreground">Active</p>
                 <Select
                   value={eIsActive}
-                  onValueChange={(v) => setEIsActive(v as any)}
+                  onValueChange={(v) => {
+                    if (v === "true" || v === "false") setEIsActive(v);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Active" />
@@ -745,10 +803,11 @@ export default function AdminMedicinesPage() {
 
               <div className="space-y-2 sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Description</p>
-                <Input
+                <Textarea
                   value={eDescription}
                   onChange={(e) => setEDescription(e.target.value)}
                   placeholder="Short description…"
+                  rows={3}
                 />
               </div>
             </div>
@@ -767,6 +826,6 @@ export default function AdminMedicinesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }

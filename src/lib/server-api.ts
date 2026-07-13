@@ -1,4 +1,3 @@
-import { apiUrl } from "@/lib/url";
 import type { ApiResponse } from "@/types/api";
 import { cookies, headers } from "next/headers";
 
@@ -16,10 +15,6 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Enhanced server API helper for Next.js Server Components and Server Actions.
- * It automatically forwards cookies and other essential headers to the API.
- */
 export async function serverApi<T>(
   path: string,
   opts: { method?: Method; body?: unknown; cache?: RequestCache } = {}
@@ -27,13 +22,11 @@ export async function serverApi<T>(
   const cookieStore = await cookies();
   const incomingHeaders = await headers();
 
-  // Forward curated headers for SSR transport sync
   const forwardedHeaders: Record<string, string> = {
     "content-type": "application/json",
     cookie: cookieStore.toString(),
   };
 
-  // Forward optional debugging/security headers if they exist
   const headerList = [
     "user-agent",
     "x-forwarded-for",
@@ -47,13 +40,11 @@ export async function serverApi<T>(
     if (val) forwardedHeaders[h] = val;
   }
 
-  // 1. Dynamic Origin Resolution for SSR Transport
   const proto = forwardedHeaders["x-forwarded-proto"] || "http";
   const host = forwardedHeaders["x-forwarded-host"];
-  
-  // Use derive origin if host exists, otherwise fallback to configured URL
-  const base = host 
-    ? `${proto}://${host}` 
+
+  const base = host
+    ? `${proto}://${host}`
     : (process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
 
   const fullUrl = `${base}/api/v1/${path.replace(/^\//, "")}`;

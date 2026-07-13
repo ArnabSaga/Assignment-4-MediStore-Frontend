@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { resendVerificationEmail } from "@/lib/email-verification";
+import { getSafeNext } from "@/lib/safe-next";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -60,6 +61,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
   const [pending, setPending] = React.useState(false);
   const [notVerifiedEmail, setNotVerifiedEmail] = React.useState<string | null>(null);
   const [resendPending, setResendPending] = React.useState(false);
+  const safeNext = getSafeNext(next);
 
   const form = useForm({
     defaultValues: {
@@ -81,8 +83,6 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
           password: value.password,
         });
 
-        console.log("login result:", result);
-
         const message = extractAuthErrorMessage(result?.error);
         const lower = message.toLowerCase();
 
@@ -102,11 +102,10 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
         }
 
         toast.success("Welcome back to MediStore", { id: toastId });
-        window.location.href = next;
+        window.location.assign(safeNext);
       } catch (error) {
         const message = extractAuthErrorMessage(error);
         toast.error(message, { id: toastId });
-        console.error("login exception:", error);
       } finally {
         setPending(false);
       }
@@ -118,7 +117,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
     setPending(true);
 
     try {
-      const callbackURL = new URL(next, window.location.origin).toString();
+      const callbackURL = new URL(safeNext, window.location.origin).toString();
 
       await authClient.signIn.social({
         provider: "google",
@@ -137,7 +136,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
     const t = toast.loading("Sending verification email...");
 
     try {
-      await resendVerificationEmail(notVerifiedEmail, next);
+      await resendVerificationEmail(notVerifiedEmail, safeNext);
       toast.success("Verification email sent. Please check your inbox.", {
         id: t,
       });
@@ -189,7 +188,7 @@ export function LoginForm({ className, next = "/", ...props }: LoginFormProps) {
                 <Link
                   href={`/check-email?email=${encodeURIComponent(
                     notVerifiedEmail
-                  )}&next=${encodeURIComponent(next)}`}
+                  )}&next=${encodeURIComponent(safeNext)}`}
                 >
                   Open verification help
                 </Link>

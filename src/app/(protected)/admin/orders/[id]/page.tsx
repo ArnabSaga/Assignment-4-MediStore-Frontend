@@ -21,6 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+} from "@/components/dashboard";
 
 type OrderStatus =
   | "PLACED"
@@ -47,12 +51,6 @@ type OrderDetails = {
 };
 
 type ApiResponse<T> = { success: boolean; message?: string; data?: T };
-type ApiListResponse<T> = {
-  success: boolean;
-  message?: string;
-  meta?: { page?: number; limit?: number; total?: number };
-  data?: T;
-};
 
 const STATUS_OPTIONS: OrderStatus[] = [
   "PLACED",
@@ -90,26 +88,26 @@ function formatDate(iso: string) {
   return d.toLocaleString();
 }
 
-async function readAdminOrders(): Promise<OrderDetails[]> {
-  const res = await fetch(`/api/v1/admin/orders?limit=800&page=1`, {
+async function readAdminOrder(id: string): Promise<OrderDetails> {
+  const res = await fetch(`/api/v1/admin/orders/${id}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as ApiListResponse<
-    OrderDetails[]
-  > | null;
+  const json = (await res
+    .json()
+    .catch(() => null)) as ApiResponse<OrderDetails> | null;
 
   if (!res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
   }
-  if (!json?.success) {
-    throw new Error(json?.message || "Failed to load orders");
+  if (!json?.success || !json.data) {
+    throw new Error(json?.message || "Failed to load order");
   }
 
-  return Array.isArray(json.data) ? json.data : [];
+  return json.data;
 }
 
 async function patchAdminOrderStatus(id: string, status: OrderStatus) {
@@ -156,11 +154,7 @@ export default function AdminOrderDetailsPage() {
     setSuccess(null);
 
     try {
-      const list = await readAdminOrders();
-      const found = list.find((o) => o.id === id);
-
-      if (!found) throw new Error("Order not found.");
-
+      const found = await readAdminOrder(id);
       setOrder(found);
       setStatus(found.status);
     } catch (e) {
@@ -195,13 +189,16 @@ export default function AdminOrderDetailsPage() {
   };
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Order Details</h1>
-          <p className="text-sm text-muted-foreground">{id}</p>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Order Details"
+        description={id}
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Orders", href: "/admin/orders" },
+          { label: "Details" },
+        ]}
+        actions={
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -218,33 +215,34 @@ export default function AdminOrderDetailsPage() {
             Refresh
           </Button>
         </div>
-      </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel border-destructive/30 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       {success ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel p-4">
           <p className="text-sm">{success}</p>
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border p-6">Loading order…</div>
+        <div className="dashboard-panel p-6">Loading order…</div>
       ) : !order ? (
-        <div className="rounded-lg border p-6">Order not found.</div>
+        <div className="dashboard-panel p-6">Order not found.</div>
       ) : (
         <>
-          <Card>
+          <Card className="dashboard-panel">
             <CardHeader>
               <CardTitle>Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-md border p-3">
+                <div className="rounded-xl border bg-background/45 p-3">
                   <p className="text-xs text-muted-foreground">Customer</p>
                   <p className="text-sm font-medium">
                     {order.customer?.name ?? "Customer"}
@@ -254,7 +252,7 @@ export default function AdminOrderDetailsPage() {
                   </p>
                 </div>
 
-                <div className="rounded-md border p-3">
+                <div className="rounded-xl border bg-background/45 p-3">
                   <p className="text-xs text-muted-foreground">Total</p>
                   <p className="text-lg font-semibold">
                     {formatBDT(order.totalAmount)}
@@ -306,7 +304,8 @@ export default function AdminOrderDetailsPage() {
             </CardContent>
           </Card>
 
-          <div className="rounded-lg border">
+          <DashboardPanel className="overflow-hidden p-0">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -354,9 +353,10 @@ export default function AdminOrderDetailsPage() {
                 )}
               </TableBody>
             </Table>
-          </div>
+            </div>
+          </DashboardPanel>
         </>
       )}
-    </main>
+    </div>
   );
 }

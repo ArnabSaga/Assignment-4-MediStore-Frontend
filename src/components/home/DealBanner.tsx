@@ -1,18 +1,22 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Countdown } from "@/components/home/Countdown";
 import { cn } from "@/lib/utils";
 
+const DEAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
 export function DealBanner({ className }: { className?: string }) {
-  const endsAtISO = new Date(
-    Date.now() + 7 * 24 * 60 * 60 * 1000
-  ).toISOString();
+  const [endsAtISO, setEndsAtISO] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setEndsAtISO(new Date(Date.now() + DEAL_DURATION_MS).toISOString());
+  }, []);
 
   return (
     <section className={cn("py-12 md:py-20", className)}>
@@ -46,7 +50,7 @@ export function DealBanner({ className }: { className?: string }) {
                 <div className="mt-10">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-3">Offers Ending In</p>
                     <div className="inline-block scale-90 sm:scale-100 origin-left">
-                        <Countdown endsAtISO={endsAtISO} />
+                        {endsAtISO ? <Countdown endsAtISO={endsAtISO} /> : null}
                     </div>
                 </div>
 
@@ -82,7 +86,7 @@ export function DealBanner({ className }: { className?: string }) {
               
               {/* Bottom Quote Overlay */}
               <div className="absolute bottom-8 left-8 right-8 rounded-xl border border-white/10 bg-white/5 p-4 text-xs font-medium text-white/90 backdrop-blur-sm shadow-xl lg:hidden">
-                 "Fast delivery, genuine medicine. Exactly what I needed."
+                 &quot;Fast delivery, genuine medicine. Exactly what I needed.&quot;
                  <p className="mt-1 font-bold text-primary/80">— Happy Customer</p>
               </div>
             </div>

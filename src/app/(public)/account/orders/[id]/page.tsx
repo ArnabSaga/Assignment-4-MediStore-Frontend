@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Truck } from "lucide-react";
 
-import { env } from "@/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +16,7 @@ type OrderStatus =
   | "SHIPPED"
   | "DELIVERED"
   | "CANCELLED";
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
 
 type ApiResponse<T> = {
   success: boolean;
@@ -74,7 +74,12 @@ function formatBDT(amount: unknown) {
   }
 }
 
-function statusBadgeVariant(status: OrderStatus) {
+type ApiErrorBody = {
+  message?: string;
+  error?: string;
+};
+
+function statusBadgeVariant(status: OrderStatus): BadgeVariant {
   switch (status) {
     case "PLACED":
       return "secondary";
@@ -91,7 +96,7 @@ function statusBadgeVariant(status: OrderStatus) {
   }
 }
 
-function readApiError(json: any, fallback: string) {
+function readApiError(json: ApiErrorBody | null | undefined, fallback: string) {
   if (!json) return fallback;
   if (typeof json.message === "string" && json.message.trim())
     return json.message;
@@ -177,9 +182,9 @@ export default function AccountOrderDetailsPage() {
       try {
         const data = await apiGetOrder(id, controller.signal);
         setOrder(data);
-      } catch (e: any) {
-        if (e?.name !== "AbortError")
-          setError(e?.message || "Something went wrong.");
+      } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setError(e instanceof Error ? e.message : "Something went wrong.");
       } finally {
         setLoading(false);
       }
@@ -207,8 +212,8 @@ export default function AccountOrderDetailsPage() {
     try {
       const updated = await apiCancelOrder(order.id);
       setOrder(updated);
-    } catch (e: any) {
-      setError(e?.message || "Failed to cancel order.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to cancel order.");
     } finally {
       setCanceling(false);
     }
@@ -316,7 +321,7 @@ export default function AccountOrderDetailsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge variant={statusBadgeVariant(order.status) as any}>
+                  <Badge variant={statusBadgeVariant(order.status)}>
                     {order.status}
                   </Badge>
                 </div>

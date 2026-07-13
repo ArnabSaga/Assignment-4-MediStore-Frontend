@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getSafeNext } from "@/lib/safe-next";
 import { cn } from "@/lib/utils";
 
 const formSchema = z
@@ -45,6 +46,7 @@ export function RegisterForm({
   const router = useRouter();
 
   const [pending, setPending] = React.useState(false);
+  const safeNext = getSafeNext(next);
 
   const form = useForm({
     defaultValues: {
@@ -61,7 +63,11 @@ export function RegisterForm({
       const toastId = toast.loading("Creating account…");
 
       try {
-        const { confirmPassword, ...payload } = value;
+        const payload = {
+          name: value.name,
+          email: value.email,
+          password: value.password,
+        };
         const { error } = await authClient.signUp.email(payload);
 
         if (error) {
@@ -75,7 +81,7 @@ export function RegisterForm({
         router.push(
           `/check-email?email=${encodeURIComponent(
             payload.email
-          )}&next=${encodeURIComponent(next)}`
+          )}&next=${encodeURIComponent(safeNext)}`
         );
 
         form.reset();
@@ -92,7 +98,7 @@ export function RegisterForm({
     setPending(true);
 
     try {
-      const callbackURL = new URL(next, window.location.origin).toString();
+      const callbackURL = new URL(safeNext, window.location.origin).toString();
 
       await authClient.signIn.social({
         provider: "google",
@@ -245,7 +251,7 @@ export function RegisterForm({
           <FieldDescription className="mt-3 text-center">
             Already have an account?{" "}
             <Link
-              href={`/login?next=${encodeURIComponent(next)}`}
+              href={`/login?next=${encodeURIComponent(safeNext)}`}
               className="underline underline-offset-4"
             >
               Login

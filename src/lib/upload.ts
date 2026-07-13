@@ -1,5 +1,3 @@
-import { clientApi } from "./client-api";
-
 /**
  * Uploads an image to Cloudinary via the backend proxy.
  * This keeps Cloudinary credentials secure and centralized in the backend.

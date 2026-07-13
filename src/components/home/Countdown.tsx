@@ -31,26 +31,31 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 export function Countdown({ endsAtISO }: { endsAtISO: string }) {
   const target = React.useMemo(() => new Date(endsAtISO), [endsAtISO]);
-  const [{ days, hours, minutes, seconds }, setState] = React.useState(() =>
-    getTimeLeft(target)
+  const [timeLeft, setTimeLeft] = React.useState<ReturnType<typeof getTimeLeft> | null>(
+    null
   );
 
   React.useEffect(() => {
-    const tick = () => setState(getTimeLeft(target));
+    const tick = () => setTimeLeft(getTimeLeft(target));
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [target]);
 
+  const days = timeLeft ? pad(timeLeft.days) : "--";
+  const hours = timeLeft ? pad(timeLeft.hours) : "--";
+  const minutes = timeLeft ? pad(timeLeft.minutes) : "--";
+  const seconds = timeLeft ? pad(timeLeft.seconds) : "--";
+
   return (
     <div className="mt-6 flex items-center justify-start gap-4">
-      <Stat value={pad(days)} label="Days" />
+      <Stat value={days} label="Days" />
       <span className="text-muted-foreground">:</span>
-      <Stat value={pad(hours)} label="Hours" />
+      <Stat value={hours} label="Hours" />
       <span className="text-muted-foreground">:</span>
-      <Stat value={pad(minutes)} label="Minutes" />
+      <Stat value={minutes} label="Minutes" />
       <span className="text-muted-foreground">:</span>
-      <Stat value={pad(seconds)} label="Seconds" />
+      <Stat value={seconds} label="Seconds" />
     </div>
   );
 }

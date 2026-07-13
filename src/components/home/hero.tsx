@@ -226,7 +226,7 @@ export function Hero({
   );
 }
 
-function TruckIcon(props: any) {
+function TruckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

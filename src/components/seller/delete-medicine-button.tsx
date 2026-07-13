@@ -32,8 +32,6 @@ export function DeleteMedicineButton({
       });
 
       if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        console.log("DELETE FAILED:", res.status, txt);
         toast.error("Delete failed", { id: t });
         return;
       }
@@ -51,8 +49,7 @@ export function DeleteMedicineButton({
 
       toast.success("Deleted successfully", { id: t });
       router.refresh();
-    } catch (e) {
-      console.log(e);
+    } catch {
       toast.error("Something went wrong", { id: t });
     } finally {
       setPending(false);

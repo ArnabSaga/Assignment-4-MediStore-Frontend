@@ -1,3 +1,5 @@
+import { getSafeNext } from "@/lib/safe-next";
+
 export async function resendVerificationEmail(
   email: string,
   next: string = "/"
@@ -9,7 +11,7 @@ export async function resendVerificationEmail(
     ? window.location.origin 
     : (process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
 
-  const callbackURL = new URL(next, origin).toString();
+  const callbackURL = new URL(getSafeNext(next), origin).toString();
 
   const res = await fetch("/api/auth/send-verification-email", {
     method: "POST",

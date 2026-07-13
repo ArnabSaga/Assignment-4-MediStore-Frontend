@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Loader2, CheckCircle2, AlertCircle, Send } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -103,7 +104,7 @@ export function Footer() {
                   <Button
                     type="submit"
                     disabled={status === "loading" || status === "success"}
-                    className="h-12 rounded-2xl sm:w-auto px-8 shadow-sm transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none bg-[#1292BD] hover:bg-[#0f7a9f] text-white hover:text-white"
+                    className="btn-primary h-12 rounded-2xl sm:w-auto px-8 shadow-sm transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {status === "loading" ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -152,7 +153,7 @@ export function Footer() {
           <div className="col-span-1 lg:col-span-1 flex flex-col items-start">
             <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
                <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 backdrop-blur-sm border border-primary/20 transition-all group-hover:bg-primary/20">
-                 <img src="/icons/logo.png" alt="MediStore" width={24} height={24} className="h-6 w-6 object-contain brightness-0 dark:brightness-100" />
+                 <Image src="/icons/logo.png" alt="MediStore" width={24} height={24} className="h-6 w-6 object-contain brightness-0 dark:brightness-100" />
                </span>
                <span className="text-lg font-bold tracking-tight">
                   Medi<span className="text-primary">Store</span>

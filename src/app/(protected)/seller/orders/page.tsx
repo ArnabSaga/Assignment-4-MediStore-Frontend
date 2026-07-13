@@ -21,9 +21,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+} from "@/components/dashboard";
 
 import { clientApi } from "@/lib/client-api";
 import type { OrderStatus, PaymentStatus } from "@/types/api";
+
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
 
 type SellerOrderItemApi = {
   id: string;
@@ -84,7 +90,7 @@ function clampText(v: string, left = 14, right = 8) {
   return `${v.slice(0, left)}…${v.slice(-right)}`;
 }
 
-function paymentStatusBadgeVariant(status: PaymentStatus) {
+function paymentStatusBadgeVariant(status: PaymentStatus): BadgeVariant {
   switch (status) {
     case "PAID":
       return "default";
@@ -109,7 +115,7 @@ const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
 ];
 
 async function fetchSellerOrderItems(): Promise<SellerOrderItemApi[]> {
-  return clientApi<SellerOrderItemApi[]>("/seller/orders?limit=200&page=1");
+  return clientApi<SellerOrderItemApi[]>("/seller/orders?limit=100&page=1");
 }
 
 type SellerOrderRow = {
@@ -213,13 +219,12 @@ export default function SellerOrdersPage() {
   const pageItems = filtered.slice(start, end);
 
   return (
-    <main className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Orders</h1>
-          <p className="text-sm text-muted-foreground">View and manage your customer orders.</p>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Orders"
+        description="View and manage your seller-owned customer orders."
+        breadcrumbs={[{ label: "Seller", href: "/seller/dashboard" }, { label: "Orders" }]}
+        actions={
         <Button
           variant="outline"
           onClick={() => void load()}
@@ -228,9 +233,10 @@ export default function SellerOrdersPage() {
         >
           Refresh
         </Button>
-      </div>
+        }
+      />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="dashboard-toolbar flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Input
           placeholder="Search by Order ID, customer, status, payment…"
           value={q}
@@ -253,23 +259,23 @@ export default function SellerOrdersPage() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+        <div className="dashboard-panel border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       <div className="grid gap-3 md:hidden">
         {loading ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             Loading orders…
           </div>
         ) : pageItems.length === 0 ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             No orders found.
           </div>
         ) : (
           pageItems.map((o) => (
-            <div key={o.orderId} className="rounded-2xl border p-4 space-y-3">
+            <div key={o.orderId} className="dashboard-mobile-card space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-xs text-muted-foreground">Order ID</div>
@@ -280,7 +286,7 @@ export default function SellerOrdersPage() {
 
                 <div className="flex flex-col gap-2 shrink-0">
                    <Badge
-                    variant={paymentStatusBadgeVariant(o.paymentStatus) as any}
+                    variant={paymentStatusBadgeVariant(o.paymentStatus)}
                     className="text-[10px] h-5 justify-center"
                   >
                     {o.paymentStatus}
@@ -325,7 +331,8 @@ export default function SellerOrdersPage() {
         )}
       </div>
 
-      <div className="hidden md:block rounded-lg border overflow-x-auto">
+      <DashboardPanel className="hidden overflow-hidden p-0 md:block">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -378,7 +385,7 @@ export default function SellerOrdersPage() {
                   </TableCell>
 
                   <TableCell>
-                    <Badge variant={paymentStatusBadgeVariant(o.paymentStatus) as any}>
+                    <Badge variant={paymentStatusBadgeVariant(o.paymentStatus)}>
                       {o.paymentStatus}
                     </Badge>
                   </TableCell>
@@ -403,7 +410,8 @@ export default function SellerOrdersPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+        </div>
+      </DashboardPanel>
 
       {!loading && total > 0 ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -431,6 +439,6 @@ export default function SellerOrdersPage() {
           </div>
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }
