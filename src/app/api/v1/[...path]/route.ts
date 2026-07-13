@@ -1,5 +1,29 @@
-import { getFilteredProxyHeaders, createProxyErrorResponse, getBackendUrlOrThrow, sanitizeProxyResponseHeaders } from "@/lib/api-proxy";
-import { NextRequest, NextResponse } from 'next/server';
+import {
+  createProxyErrorResponse,
+  getBackendUrlOrThrow,
+  getFilteredProxyHeaders,
+  sanitizeProxyResponseHeaders,
+} from "@/lib/api-proxy";
+import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+interface HeadersWithSetCookie extends Headers {
+  getSetCookie(): string[];
+}
+
+function readSetCookies(headers: Headers): string[] {
+  const candidate = headers as Partial<HeadersWithSetCookie>;
+
+  if (typeof candidate.getSetCookie !== "function") {
+    throw new Error(
+      "The current server runtime does not support Headers.getSetCookie()."
+    );
+  }
+
+  return candidate.getSetCookie.call(headers);
+}
 
 function rewriteSetCookie(value: string, req: NextRequest) {
   let rewritten = value.replace(/;\s*Path=[^;]*/i, "; Path=/");
@@ -24,9 +48,6 @@ async function handler(
     const incomingUrl = new URL(req.url);
     const target = new URL(`/api/v1/${path.join("/")}`, backendUrl);
     target.search = incomingUrl.search;
-
-    // Temporary diagnostic logging (caution: no sensitive data)
-    console.log(`[Proxy] API v1 Request: ${req.method} ${incomingUrl.pathname} -> ${target.origin}${target.pathname}`);
 
     // 1. Filtered Header Proxying
     const filteredHeaders = getFilteredProxyHeaders(req.headers);
@@ -53,15 +74,11 @@ async function handler(
       cache: "no-store",
     });
 
-    console.log(`[Proxy] API v1 Response: ${backendRes.status} from ${target.pathname}`);
-    
     // 2. Sanitize Response Headers (Fixes ERR_CONTENT_DECODING_FAILED)
     const outHeaders = sanitizeProxyResponseHeaders(backendRes.headers);
 
     // 2. Preserve Cookie Fidelity (Pass-through Rules)
-    const setCookies: string[] =
-      (backendRes.headers as any).getSetCookie?.() ||
-      (outHeaders.get("set-cookie") ? [outHeaders.get("set-cookie")!] : []);
+    const setCookies = readSetCookies(backendRes.headers);
 
     if (setCookies.length) {
       outHeaders.delete("set-cookie");
@@ -76,6 +93,12 @@ async function handler(
       headers: outHeaders,
     });
   } catch (error) {
+    console.error("API proxy request failed", {
+      method: req.method,
+      path: req.nextUrl.pathname,
+      error: error instanceof Error ? error.message : "Unknown proxy error",
+    });
+
     if (error instanceof Error && error.message.includes("BACKEND_URL")) {
       return createProxyErrorResponse(500, "Frontend transport misconfiguration.", error);
     }

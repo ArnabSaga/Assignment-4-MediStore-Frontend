@@ -10,8 +10,6 @@ export const env = createEnv({
     NEXT_PUBLIC_FRONTEND_URL: z.string().url(),
 
     NEXT_PUBLIC_API_URL: z.string().min(1),
-
-    NEXT_PUBLIC_AUTH_URL: z.string().min(1),
   },
 
   runtimeEnv: {
@@ -22,6 +20,5 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_FRONTEND_URL ||
       (process.env.NODE_ENV === "development" ? "http://localhost:3000" : undefined),
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "/api/v1",
-    NEXT_PUBLIC_AUTH_URL: process.env.NEXT_PUBLIC_AUTH_URL || "/api/auth",
   },
 });

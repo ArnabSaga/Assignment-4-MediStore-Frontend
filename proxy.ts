@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { env } from "@/env";
+import { getBackendURL } from "@/lib/backend-url";
 
 type Role = "CUSTOMER" | "SELLER" | "ADMIN";
 
@@ -24,7 +24,7 @@ async function getRole(req: NextRequest): Promise<Role | null> {
   try {
     const cookie = req.headers.get("cookie") ?? "";
 
-    const sessionUrl = new URL(SESSION_PATH, env.BACKEND_URL);
+    const sessionUrl = new URL(SESSION_PATH, getBackendURL());
 
     const res = await fetch(sessionUrl.toString(), {
       method: "GET",

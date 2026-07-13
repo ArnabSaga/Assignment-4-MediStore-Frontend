@@ -2,6 +2,7 @@
  * Shared proxy configuration and header allowlist for MediStore unified transport.
  * Ensures symmetry between /api/auth and /api/v1 proxies.
  */
+import { getBackendURL } from "@/lib/backend-url";
 
 /**
  * Headers that are safe and necessary to forward to the backend.
@@ -60,11 +61,15 @@ export const getFilteredProxyHeaders = (headers: Headers): Record<string, string
  * Used to ensure the proxy is correctly configured at runtime.
  */
 export const getBackendUrlOrThrow = (): string => {
-  const url = process.env.BACKEND_URL;
-  if (!url) {
-    throw new Error("BACKEND_URL is not configured in the environment.");
+  return getBackendURL();
+};
+
+export const getPublicProxyError = (error?: unknown): string => {
+  if (process.env.NODE_ENV === "development" && error instanceof Error) {
+    return error.message;
   }
-  return url;
+
+  return "proxy_request_failed";
 };
 
 /**
@@ -80,8 +85,10 @@ export const createProxyErrorResponse = (
   return Response.json(
     { 
       success: false, 
-      message,
-      error: error instanceof Error ? error.message : "internal_proxy_error" 
+      message: process.env.NODE_ENV === "development"
+        ? message
+        : "Unable to process the request.",
+      error: getPublicProxyError(error)
     },
     { status }
   );
