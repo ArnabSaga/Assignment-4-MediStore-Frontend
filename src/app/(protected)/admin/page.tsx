@@ -2,19 +2,17 @@
 
 import Link from "next/link";
 import * as React from "react";
+import { Boxes, Package, ShoppingBag, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+  DashboardStatCard,
+} from "@/components/dashboard";
 
 type Role = "CUSTOMER" | "SELLER" | "ADMIN";
 type OrderStatus = "PLACED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
-
-type ApiResponse<T> = {
-  success: boolean;
-  message?: string;
-  data?: T;
-};
 
 type ApiListResponse<T> = {
   success: boolean;
@@ -63,7 +61,7 @@ async function getJSON<T>(url: string): Promise<T> {
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as any;
+  const json = (await res.json().catch(() => null)) as { message?: string } | null;
 
   if (!res.ok) {
     throw new Error(json?.message || `Request failed (${res.status})`);
@@ -177,94 +175,78 @@ export default function AdminDashboardPage() {
   }, [load]);
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Admin Dashboard</h1>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Overview"
+        description="Monitor platform users, catalogue health, and order activity from real MediStore data."
+        actions={
         <Button variant="outline" onClick={() => void load()} disabled={loading}>
           Refresh
         </Button>
-      </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel border-destructive/30 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border p-6">Loading dashboard…</div>
+        <div className="dashboard-panel p-6 text-sm text-muted-foreground">
+          Loading dashboard...
+        </div>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Total Users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold">{userCount}</div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Sellers: {sellerCount} • Customers: {customerCount}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Banned Users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold">{bannedCount}</div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Active: {Math.max(userCount - bannedCount, 0)}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Total Orders</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold">{orderCount}</div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Revenue (sum): {fmtBDT(revenue)}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Catalogue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold">{medicineCount}</div>
-                <p className="mt-1 text-xs text-muted-foreground">Categories: {categoryCount}</p>
-              </CardContent>
-            </Card>
+            <DashboardStatCard
+              title="Users"
+              value={userCount}
+              icon={Users}
+              helper={`Loaded sellers: ${sellerCount} · customers: ${customerCount}`}
+            />
+            <DashboardStatCard
+              title="Banned Users"
+              value={bannedCount}
+              icon={Users}
+              helper={`Active from loaded data: ${Math.max(userCount - bannedCount, 0)}`}
+            />
+            <DashboardStatCard
+              title="Orders"
+              value={orderCount}
+              icon={ShoppingBag}
+              helper={`Loaded order value: ${fmtBDT(revenue)}`}
+            />
+            <DashboardStatCard
+              title="Catalogue"
+              value={medicineCount}
+              icon={Package}
+              helper={`Categories: ${categoryCount}`}
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Orders by Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <DashboardPanel className="lg:col-span-2">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Orders by Status</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Based on the currently loaded admin order response.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(Object.keys(orderTotals) as Array<keyof typeof orderTotals>).map((k) => (
-                    <div key={k} className="rounded-md border p-3">
+                    <div key={k} className="rounded-xl border bg-background/45 p-3">
                       <p className="text-xs text-muted-foreground">{k}</p>
                       <p className="text-lg font-semibold">{orderTotals[k]}</p>
                     </div>
                   ))}
                 </div>
 
-                <Separator />
-
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild size="sm">
+                <div className="flex flex-wrap gap-2 border-t pt-4">
+                  <Button asChild size="sm" className="btn-primary">
                     <Link href="/admin/orders">Manage Orders</Link>
                   </Button>
                   <Button asChild size="sm" variant="outline">
@@ -277,34 +259,42 @@ export default function AdminDashboardPage() {
                     <Link href="/admin/medicines">Manage Medicines</Link>
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </DashboardPanel>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Admin Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="rounded-md border p-3">
+            <DashboardPanel>
+              <h2 className="text-lg font-semibold">Admin Actions</h2>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-xl border bg-background/45 p-3">
                   <p className="text-sm font-medium">Review Users</p>
                   <p className="text-xs text-muted-foreground">Ban/unban and role changes.</p>
-                  <Button asChild size="sm" className="mt-2 w-full">
+                  <Button asChild size="sm" className="btn-primary mt-2 w-full">
                     <Link href="/admin/users">Open</Link>
                   </Button>
                 </div>
 
-                <div className="rounded-md border p-3">
+                <div className="rounded-xl border bg-background/45 p-3">
                   <p className="text-sm font-medium">Monitor Orders</p>
                   <p className="text-xs text-muted-foreground">Update order status quickly.</p>
                   <Button asChild size="sm" className="mt-2 w-full" variant="outline">
                     <Link href="/admin/orders">Open</Link>
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="rounded-xl border bg-background/45 p-3">
+                  <p className="text-sm font-medium">Catalogue</p>
+                  <p className="text-xs text-muted-foreground">Categories and medicines.</p>
+                  <Button asChild size="sm" className="mt-2 w-full" variant="outline">
+                    <Link href="/admin/categories">
+                      <Boxes aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Open Categories
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </DashboardPanel>
           </div>
         </>
       )}
-    </main>
+    </div>
   );
 }

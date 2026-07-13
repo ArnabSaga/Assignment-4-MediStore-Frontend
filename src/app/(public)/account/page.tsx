@@ -29,8 +29,12 @@ type SessionUser = {
   image?: string | null;
 };
 
+type BetterAuthSessionUser = SessionUser & {
+  role?: Role;
+};
+
 type BetterAuthSessionResult =
-  | { data: { user: any; session: any } | null; error: null }
+  | { data: { user: BetterAuthSessionUser; session: unknown } | null; error: null }
   | { data: null; error: { message?: string } };
 
 function initials(name?: string | null) {

@@ -19,13 +19,18 @@ type ApiResponse<T> = {
   data?: T;
 };
 
+type ApiErrorBody = {
+  message?: string;
+  error?: string;
+};
+
 const API_BASE = "/api/v1";
 
 function moneyBDT(value: number) {
   return `৳${Math.round(value)}`;
 }
 
-function readApiError(json: any, fallback: string) {
+function readApiError(json: ApiErrorBody | null | undefined, fallback: string) {
   if (!json) return fallback;
   if (typeof json.message === "string" && json.message.trim())
     return json.message;
@@ -139,9 +144,9 @@ export default function CheckoutPage() {
 
       clear();
       router.push(`/account/orders/${json.data.id}`);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      setError(e?.message || "Order failed. Please try again.");
+      setError(e instanceof Error ? e.message : "Order failed. Please try again.");
     } finally {
       setLoading(false);
     }

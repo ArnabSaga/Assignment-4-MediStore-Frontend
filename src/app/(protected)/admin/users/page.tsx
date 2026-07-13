@@ -19,6 +19,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+} from "@/components/dashboard";
 
 import { clientApi } from "@/lib/client-api";
 import type { Role, CurrentUser as UserRow } from "@/types/api";
@@ -181,30 +185,31 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Users</h1>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Users"
+        description="Manage marketplace accounts, access roles, and account safety states."
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Users" }]}
+        actions={
         <Button variant="outline" onClick={() => void load()} disabled={loading || !!busyId}>
           Refresh
         </Button>
-      </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel border-destructive/30 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       {success ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel p-4">
           <p className="text-sm">{success}</p>
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="dashboard-toolbar flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -243,11 +248,11 @@ export default function AdminUsersPage() {
 
       <div className="grid gap-3 md:hidden">
         {loading ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             Loading users…
           </div>
         ) : pageItems.length === 0 ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             No users found.
           </div>
         ) : (
@@ -255,7 +260,7 @@ export default function AdminUsersPage() {
             const busy = busyId === u.id;
 
             return (
-              <div key={u.id} className="rounded-2xl border p-4 space-y-3">
+              <div key={u.id} className="dashboard-mobile-card space-y-3">
                 <div className="space-y-1">
                   <div className="text-sm font-semibold">{u.name}</div>
                   <div className="text-xs text-muted-foreground break-all">{u.email}</div>
@@ -330,7 +335,8 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      <div className="hidden md:block rounded-lg border overflow-x-auto">
+      <DashboardPanel className="hidden overflow-hidden p-0 md:block">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -433,7 +439,8 @@ export default function AdminUsersPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+        </div>
+      </DashboardPanel>
 
       {!loading && total > 0 ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -459,6 +466,6 @@ export default function AdminUsersPage() {
           </div>
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

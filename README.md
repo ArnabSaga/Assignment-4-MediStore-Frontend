@@ -221,10 +221,14 @@ pnpm install
 ### 4. Configuration
 Create a `.env.local` file in the root directory:
 ```env
-BACKEND_URL=your_backend_api_url
 NEXT_PUBLIC_API_URL=/api/v1
-NEXT_PUBLIC_AUTH_URL=/api/auth
+NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:5000
 ```
+
+Authentication is exposed through the frontend origin at `/api/auth/*` by a
+Next.js `beforeFiles` rewrite to the backend. Browser code should call
+same-origin `/api/auth/*` and `/api/v1/*` paths, not backend-direct auth URLs.
 
 ### 5. Start Development
 ```bash
@@ -237,9 +241,9 @@ pnpm dev
 
 | Variable | Description | Example |
 | :--- | :--- | :--- |
-| `BACKEND_URL` | Base URL for the backend API | `https://api.medistore.com` |
+| `BACKEND_URL` | Server-only backend origin used by Next.js rewrites and API proxies | `https://api.medistore.com` |
 | `NEXT_PUBLIC_API_URL` | Public API base path | `/api/v1` |
-| `NEXT_PUBLIC_AUTH_URL`| Auth service base path | `/api/auth` |
+| `NEXT_PUBLIC_FRONTEND_URL` | Public frontend origin used for server-side callback URL construction | `https://medistore.example.com` |
 
 ---
 

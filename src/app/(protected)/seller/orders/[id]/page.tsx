@@ -21,6 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+} from "@/components/dashboard";
 
 import { clientApi } from "@/lib/client-api";
 import type { OrderStatus } from "@/types/api";
@@ -161,8 +165,14 @@ async function fetchSellerOrderById(inputId: string): Promise<SellerOrderDetails
   };
 }
 
+type UpdateOrderStatusResponse = {
+  status: OrderStatus;
+  updatedAt: string;
+  customer?: SellerOrderDetails["customer"];
+};
+
 async function updateOrderStatus(id: string, status: OrderStatus) {
-  return clientApi<any>(`/seller/orders/${id}`, {
+  return clientApi<UpdateOrderStatusResponse>(`/seller/orders/${id}`, {
     method: "PATCH",
     body: { status },
   });
@@ -234,21 +244,20 @@ export default function SellerOrderDetailsPage() {
   };
 
   return (
-    <main className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/seller/orders">Back</Link>
-            </Button>
-            <h1 className="text-xl font-semibold">Order Details</h1>
-          </div>
-
-          <p className="text-sm text-muted-foreground break-all">
-            {order?.id ? `Order ID: ${order.id}` : id ? `Order ID: ${id}` : ""}
-          </p>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Order Details"
+        description={order?.id ? `Order ID: ${order.id}` : id ? `Order ID: ${id}` : ""}
+        breadcrumbs={[
+          { label: "Seller", href: "/seller/dashboard" },
+          { label: "Orders", href: "/seller/orders" },
+          { label: "Details" },
+        ]}
+        actions={
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/seller/orders">Back</Link>
+          </Button>
         <Button
           variant="outline"
           onClick={() => void load()}
@@ -257,21 +266,23 @@ export default function SellerOrderDetailsPage() {
         >
           Refresh
         </Button>
-      </div>
+        </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+        <div className="dashboard-panel border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border p-6">Loading…</div>
+        <div className="dashboard-panel p-6">Loading…</div>
       ) : !order ? (
-        <div className="rounded-lg border p-6">Order not found.</div>
+        <div className="dashboard-panel p-6">Order not found.</div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
-          <section className="lg:col-span-2 rounded-lg border">
+          <DashboardPanel className="lg:col-span-2">
             <div className="p-4">
               <h2 className="font-semibold">Items</h2>
               <p className="text-sm text-muted-foreground">{order.items.length} item(s)</p>
@@ -280,7 +291,7 @@ export default function SellerOrderDetailsPage() {
 
             <div className="p-4 space-y-3 md:hidden">
               {order.items.map((it) => (
-                <div key={it.id} className="rounded-2xl border p-4 space-y-3">
+                <div key={it.id} className="dashboard-mobile-card space-y-3">
                   <div className="min-w-0">
                     <div className="text-xs text-muted-foreground">Medicine</div>
                     <div className="font-semibold truncate">{it.medicine?.name ?? "Medicine"}</div>
@@ -358,9 +369,9 @@ export default function SellerOrderDetailsPage() {
                 </Table>
               </div>
             </div>
-          </section>
+          </DashboardPanel>
 
-          <aside className="rounded-lg border h-fit">
+          <DashboardPanel className="h-fit">
             <div className="p-4 space-y-3">
               <h2 className="font-semibold">Summary</h2>
 
@@ -446,9 +457,9 @@ export default function SellerOrderDetailsPage() {
                 </div>
               </div>
             </div>
-          </aside>
+          </DashboardPanel>
         </div>
       )}
-    </main>
+    </div>
   );
 }

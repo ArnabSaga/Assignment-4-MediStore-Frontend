@@ -13,13 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  DashboardPageHeader,
+  DashboardPanel,
+} from "@/components/dashboard";
 
 type OrderStatus =
   | "PLACED"
@@ -101,6 +97,22 @@ function summarizeMedicines(items?: OrderListItem["items"]) {
   const remaining = uniq.length - shown.length;
 
   return remaining > 0 ? `${shown.join(", ")} +${remaining}` : shown.join(", ");
+}
+
+function statusClassName(status: OrderStatus) {
+  switch (status) {
+    case "DELIVERED":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+    case "CANCELLED":
+      return "border-destructive/30 bg-destructive/10 text-destructive";
+    case "SHIPPED":
+      return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
+    case "PROCESSING":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+    case "PLACED":
+    default:
+      return "border-border bg-muted/40 text-foreground";
+  }
 }
 
 const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "ALL" }> = [
@@ -200,11 +212,12 @@ export default function AdminOrdersPage() {
   const maxPage = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Orders</h1>
-        </div>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Orders"
+        description="Review marketplace orders and open individual fulfilment workflows."
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Orders" }]}
+        actions={
         <Button
           variant="outline"
           onClick={() => void load()}
@@ -212,15 +225,16 @@ export default function AdminOrdersPage() {
         >
           Refresh
         </Button>
-      </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel border-destructive/30 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="dashboard-toolbar flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -245,13 +259,13 @@ export default function AdminOrdersPage() {
         </Select>
       </div>
 
-      <div className="grid gap-3 md:hidden">
+      <div className="grid gap-3 xl:hidden">
         {loading ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             Loading orders…
           </div>
         ) : orders.length === 0 ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             No orders found.
           </div>
         ) : (
@@ -260,7 +274,7 @@ export default function AdminOrdersPage() {
             const medSummary = summarizeMedicines(o.items);
 
             return (
-              <div key={o.id} className="rounded-2xl border p-4 space-y-3">
+              <div key={o.id} className="dashboard-mobile-card space-y-3">
                 <div className="space-y-1">
                   <div className="text-sm font-semibold">Order</div>
                   <div className="text-xs text-muted-foreground font-mono">
@@ -320,83 +334,80 @@ export default function AdminOrdersPage() {
         )}
       </div>
 
-      <div className="hidden md:block rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[320px]">Order</TableHead>
-              <TableHead className="min-w-55">Customer</TableHead>
-              <TableHead className="min-w-35">Status</TableHead>
-              <TableHead className="text-right min-w-35">Total</TableHead>
-              <TableHead className="text-right min-w-25">Items</TableHead>
-              <TableHead className="text-right min-w-55">Created</TableHead>
-              <TableHead className="text-right min-w-30">Action</TableHead>
-            </TableRow>
-          </TableHeader>
+      <DashboardPanel className="hidden p-0 xl:block">
+        <div className="divide-y">
+          <div className="grid grid-cols-[minmax(260px,1.4fr)_minmax(190px,1fr)_minmax(110px,0.7fr)_minmax(110px,0.6fr)_minmax(170px,0.9fr)_auto] gap-4 px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div>Order</div>
+            <div>Customer</div>
+            <div>Status</div>
+            <div>Total</div>
+            <div>Created</div>
+            <div className="text-right">Action</div>
+          </div>
 
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center">
-                  Loading orders…
-                </TableCell>
-              </TableRow>
-            ) : orders.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center">
-                  No orders found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              orders.map((o) => (
-                <TableRow key={o.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span className="truncate max-w-130">{o.id}</span>
-                      <span className="text-xs text-muted-foreground truncate max-w-130">
-                        {summarizeMedicines(o.items)}
-                      </span>
+          {loading ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              Loading orders…
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              No orders found.
+            </div>
+          ) : (
+            orders.map((o) => {
+              const itemsCount = o._count?.items ?? o.items?.length ?? 0;
+
+              return (
+                <div
+                  key={o.id}
+                  className="grid grid-cols-[minmax(260px,1.4fr)_minmax(190px,1fr)_minmax(110px,0.7fr)_minmax(110px,0.6fr)_minmax(170px,0.9fr)_auto] items-center gap-4 px-5 py-4"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{o.id}</div>
+                    <div className="mt-1 truncate text-xs text-muted-foreground">
+                      {summarizeMedicines(o.items)} • {itemsCount} item
+                      {itemsCount === 1 ? "" : "s"}
                     </div>
-                  </TableCell>
+                  </div>
 
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="truncate max-w-65">
-                        {o.customer?.name ?? "Customer"}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate max-w-65">
-                        {o.customer?.email ?? ""}
-                      </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">
+                      {o.customer?.name ?? "Customer"}
                     </div>
-                  </TableCell>
+                    <div className="mt-1 truncate text-xs text-muted-foreground">
+                      {o.customer?.email ?? ""}
+                    </div>
+                  </div>
 
-                  <TableCell className="whitespace-nowrap">
-                    {o.status}
-                  </TableCell>
+                  <div>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClassName(
+                        o.status
+                      )}`}
+                    >
+                      {o.status}
+                    </span>
+                  </div>
 
-                  <TableCell className="text-right whitespace-nowrap">
+                  <div className="whitespace-nowrap text-sm font-semibold">
                     {formatBDT(o.totalAmount)}
-                  </TableCell>
+                  </div>
 
-                  <TableCell className="text-right whitespace-nowrap">
-                    {o._count?.items ?? o.items?.length ?? "-"}
-                  </TableCell>
-
-                  <TableCell className="text-right whitespace-nowrap">
+                  <div className="whitespace-nowrap text-sm text-muted-foreground">
                     {formatDate(o.createdAt)}
-                  </TableCell>
+                  </div>
 
-                  <TableCell className="text-right whitespace-nowrap">
+                  <div className="flex justify-end">
                     <Button asChild size="sm">
                       <Link href={`/admin/orders/${o.id}`}>View</Link>
                     </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DashboardPanel>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
@@ -420,6 +431,6 @@ export default function AdminOrdersPage() {
           </Button>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

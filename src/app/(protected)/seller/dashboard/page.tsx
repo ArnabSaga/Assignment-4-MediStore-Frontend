@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
+import { AlertTriangle, Boxes, PackageX, ShoppingBag } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -10,6 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+  DashboardStatCard,
+} from "@/components/dashboard";
 
 type OrderStatus = "PLACED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
@@ -101,13 +106,13 @@ async function backendFetch<T>(path: string): Promise<T> {
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  // ✅ Build origin dynamically (works on localhost + Vercel)
+  // Build origin dynamically (works on localhost and Vercel).
   const h = await headers();
   const host = h.get("host"); // localhost:3000 or your-domain.vercel.app
   const proto = h.get("x-forwarded-proto") ?? "http";
   const origin = `${proto}://${host}`;
 
-  // ✅ Call Next proxy (same-origin), not BACKEND_URL
+  // Call the same-origin Next proxy instead of the backend origin.
   const res = await fetch(`${origin}${path}`, {
     method: "GET",
     headers: {
@@ -191,7 +196,7 @@ export default async function SellerDashboardPage() {
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const revenueThisMonth = orders
+  const orderValueThisMonth = orders
     .filter((o) => new Date(o.createdAt).getTime() >= monthStart)
     .reduce((sum, o) => sum + o.sellerTotal, 0);
 
@@ -204,67 +209,47 @@ export default async function SellerDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Seller Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Quick overview of your medicines and orders.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Overview"
+        description="Track your seller-scoped medicines, stock status, and loaded order activity."
+        breadcrumbs={[{ label: "Seller", href: "/seller/dashboard" }, { label: "Overview" }]}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="card-surface">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Revenue (This Month)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{money(revenueThisMonth)}</CardContent>
-        </Card>
-
-        <Card className="card-surface">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Medicines
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {totalMedicines}
-            <span className="ml-2 text-sm text-muted-foreground">({activeMedicines} active)</span>
-          </CardContent>
-        </Card>
-
-        <Card className="card-surface">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending Orders
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {pendingOrders}
-            <span className="ml-2 text-sm text-muted-foreground">/ {totalOrders}</span>
-          </CardContent>
-        </Card>
-
-        <Card className="card-surface">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Out of Stock
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{outOfStock}</CardContent>
-        </Card>
+        <DashboardStatCard
+          title="This Month Order Value"
+          value={money(orderValueThisMonth)}
+          icon={ShoppingBag}
+          helper="From loaded seller orders"
+        />
+        <DashboardStatCard
+          title="Medicines"
+          value={totalMedicines}
+          icon={Boxes}
+          helper={`${activeMedicines} active listings`}
+        />
+        <DashboardStatCard
+          title="Pending Orders"
+          value={pendingOrders}
+          icon={AlertTriangle}
+          helper={`Out of ${totalOrders} loaded orders`}
+        />
+        <DashboardStatCard
+          title="Out of Stock"
+          value={outOfStock}
+          icon={PackageX}
+          helper="Seller catalogue"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="card-surface">
-          <CardHeader>
-            <CardTitle className="text-base">Recent Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <DashboardPanel>
+          <h2 className="text-lg font-semibold">Recent Orders</h2>
+          <div className="mt-4">
             {recentOrders.length === 0 ? (
               <p className="text-sm text-muted-foreground">No orders yet.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-xl border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -291,18 +276,16 @@ export default async function SellerDashboardPage() {
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </DashboardPanel>
 
-        <Card className="card-surface">
-          <CardHeader>
-            <CardTitle className="text-base">Low Stock Medicines</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <DashboardPanel>
+          <h2 className="text-lg font-semibold">Low Stock Medicines</h2>
+          <div className="mt-4">
             {lowStockMedicines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No low stock items 🎉</p>
+              <p className="text-sm text-muted-foreground">No low stock items.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-xl border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -327,8 +310,8 @@ export default async function SellerDashboardPage() {
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </DashboardPanel>
       </div>
     </div>
   );

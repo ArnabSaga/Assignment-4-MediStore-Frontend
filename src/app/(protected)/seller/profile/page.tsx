@@ -10,13 +10,25 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { DashboardPageHeader } from "@/components/dashboard";
 
 import { clientApi } from "@/lib/client-api";
-import type { CurrentUser as SessionUser, ApiResponse } from "@/types/api";
+import type { CurrentUser as SessionUser } from "@/types/api";
 import { Role } from '@/hooks/use-session';
 
+type BetterAuthSessionUser = {
+  id: string;
+  name: string;
+  email: string;
+  role?: Role;
+  image?: string | null;
+  phone?: string | null;
+  emailVerified?: boolean;
+  isBanned?: boolean;
+};
+
 type BetterAuthSessionResult =
-  | { data: { user: any; session: any } | null; error: null }
+  | { data: { user: BetterAuthSessionUser; session: unknown } | null; error: null }
   | { data: null; error: { message?: string } };
 
 async function getMeFromSession(): Promise<SessionUser> {
@@ -124,15 +136,15 @@ export default function SellerProfilePage() {
   };
 
   return (
-    <main className="space-y-6 p-4 md:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Seller Profile</h1>
-          <p className="text-sm text-muted-foreground">
-            View and update your profile information.
-          </p>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Seller Profile"
+        description="View and update your profile information."
+        breadcrumbs={[
+          { label: "Seller", href: "/seller/dashboard" },
+          { label: "Profile" },
+        ]}
+        actions={
         <Button
           variant="outline"
           onClick={() => void load()}
@@ -140,27 +152,28 @@ export default function SellerProfilePage() {
         >
           Refresh
         </Button>
-      </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel border-destructive/30 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       {success ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel p-4">
           <p className="text-sm">{success}</p>
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border p-6">Loading…</div>
+        <div className="dashboard-panel p-6">Loading…</div>
       ) : !user ? (
-        <div className="rounded-lg border p-6">No user session found.</div>
+        <div className="dashboard-panel p-6">No user session found.</div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-1">
+          <Card className="dashboard-panel lg:col-span-1">
             <CardHeader>
               <CardTitle>Profile</CardTitle>
             </CardHeader>
@@ -213,7 +226,7 @@ export default function SellerProfilePage() {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-2">
+          <Card className="dashboard-panel lg:col-span-2">
             <CardHeader>
               <CardTitle>Edit Details</CardTitle>
             </CardHeader>
@@ -284,6 +297,6 @@ export default function SellerProfilePage() {
           </Card>
         </div>
       )}
-    </main>
+    </div>
   );
 }

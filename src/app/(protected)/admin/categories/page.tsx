@@ -6,17 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
 import { clientApi } from "@/lib/client-api";
-import type { Category, ApiResponse } from "@/types/api";
+import type { Category } from "@/types/api";
+import {
+  DashboardPageHeader,
+  DashboardPanel,
+} from "@/components/dashboard";
 
 const API = {
   list: "/categories?limit=100",
@@ -207,12 +204,12 @@ export default function AdminCategoriesPage() {
   const creating = busyId === "create";
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Categories</h1>
-        </div>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Categories"
+        description="Create and organize medicine categories used by the public catalogue."
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Categories" }]}
+        actions={
         <Button
           variant="outline"
           onClick={() => void load()}
@@ -220,21 +217,22 @@ export default function AdminCategoriesPage() {
         >
           Refresh
         </Button>
-      </div>
+        }
+      />
 
       {error ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+        <div className="dashboard-panel border-destructive/30 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       ) : null}
 
       {success ? (
-        <div className="rounded-lg border p-4">
+        <div className="dashboard-panel p-4">
           <p className="text-sm">{success}</p>
         </div>
       ) : null}
 
-      <Card>
+      <Card className="dashboard-panel">
         <CardHeader>
           <CardTitle>Create Category</CardTitle>
         </CardHeader>
@@ -254,11 +252,12 @@ export default function AdminCategoriesPage() {
               <p className="text-xs text-muted-foreground mb-2">
                 Description (optional)
               </p>
-              <Input
+              <Textarea
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 placeholder="Short description…"
                 disabled={creating}
+                rows={3}
               />
             </div>
           </div>
@@ -274,7 +273,7 @@ export default function AdminCategoriesPage() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="dashboard-toolbar flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -283,13 +282,13 @@ export default function AdminCategoriesPage() {
         />
       </div>
 
-      <div className="grid gap-3 md:hidden">
+      <div className="grid gap-3 xl:hidden">
         {loading ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             Loading categories…
           </div>
         ) : pageItems.length === 0 ? (
-          <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+          <div className="dashboard-panel p-6 text-center text-sm text-muted-foreground">
             No categories found.
           </div>
         ) : (
@@ -298,7 +297,7 @@ export default function AdminCategoriesPage() {
             const isEditing = editingId === c.id;
 
             return (
-              <div key={c.id} className="rounded-2xl border p-4 space-y-3">
+              <div key={c.id} className="dashboard-mobile-card space-y-3">
                 <div className="space-y-1">
                   <div className="text-xs text-muted-foreground">Category</div>
 
@@ -326,11 +325,12 @@ export default function AdminCategoriesPage() {
                     Description
                   </div>
                   {isEditing ? (
-                    <Input
+                    <Textarea
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
                       placeholder="Description…"
                       disabled={busy}
+                      rows={3}
                     />
                   ) : (
                     <div className="text-sm text-muted-foreground">
@@ -387,122 +387,117 @@ export default function AdminCategoriesPage() {
         )}
       </div>
 
-      <div className="hidden md:block rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-65">Category</TableHead>
-              <TableHead className="min-w-45">Slug</TableHead>
-              <TableHead className="min-w-[320px]">Description</TableHead>
-              <TableHead className="text-right min-w-55">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+      <DashboardPanel className="hidden p-0 xl:block">
+        <div className="divide-y">
+          <div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,0.7fr)_minmax(260px,1.5fr)_auto] gap-4 px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div>Category</div>
+            <div>Slug</div>
+            <div>Description</div>
+            <div className="text-right">Actions</div>
+          </div>
 
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="py-10 text-center">
-                  Loading categories…
-                </TableCell>
-              </TableRow>
-            ) : pageItems.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="py-10 text-center">
-                  No categories found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageItems.map((c) => {
-                const busy = busyId === c.id;
-                const isEditing = editingId === c.id;
+          {loading ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              Loading categories…
+            </div>
+          ) : pageItems.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              No categories found.
+            </div>
+          ) : (
+            pageItems.map((c) => {
+              const busy = busyId === c.id;
+              const isEditing = editingId === c.id;
 
-                return (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">
-                      {isEditing ? (
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="max-w-sm"
+              return (
+                <div
+                  key={c.id}
+                  className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,0.7fr)_minmax(260px,1.5fr)_auto] items-start gap-4 px-5 py-4"
+                >
+                  <div className="min-w-0">
+                    {isEditing ? (
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        disabled={busy}
+                      />
+                    ) : (
+                      <>
+                        <div className="font-medium">{c.name}</div>
+                        <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                          {c.id}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 font-mono text-sm text-muted-foreground">
+                    {c.slug}
+                  </div>
+
+                  <div className="min-w-0">
+                    {isEditing ? (
+                      <Textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        placeholder="Description…"
+                        disabled={busy}
+                        rows={3}
+                      />
+                    ) : (
+                      <p className="max-w-prose break-words text-sm leading-6 text-muted-foreground">
+                        {c.description?.trim() ? c.description : "—"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    {isEditing ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => void onUpdate(c.id)}
+                          disabled={busy || !editName.trim()}
+                        >
+                          {busy ? "Saving…" : "Save"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={cancelEdit}
                           disabled={busy}
-                        />
-                      ) : (
-                        <div className="flex flex-col">
-                          <span>{c.name}</span>
-                          <span className="text-[11px] text-muted-foreground truncate max-w-90">
-                            {c.id}
-                          </span>
-                        </div>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="text-sm text-muted-foreground">
-                      <span className="font-mono">{c.slug}</span>
-                    </TableCell>
-
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          placeholder="Description…"
-                          disabled={busy}
-                        />
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          {c.description ?? "—"}
-                        </span>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      {isEditing ? (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => void onUpdate(c.id)}
-                            disabled={busy || !editName.trim()}
-                          >
-                            {busy ? "Saving…" : "Save"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            disabled={busy}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => startEdit(c)}
-                            disabled={!!busyId}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => void onDelete(c)}
-                            disabled={busy || !!busyId}
-                            className="text-black dark:text-white"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => startEdit(c)}
+                          disabled={!!busyId}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => void onDelete(c)}
+                          disabled={busy || !!busyId}
+                          className="text-black dark:text-white"
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DashboardPanel>
 
       {!loading && total > 0 ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -530,6 +525,6 @@ export default function AdminCategoriesPage() {
       ) : null}
 
       <Separator />
-    </main>
+    </div>
   );
 }

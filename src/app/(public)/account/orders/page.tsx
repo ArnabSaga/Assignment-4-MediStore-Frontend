@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 
-import { env } from "@/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +24,7 @@ type OrderStatus =
   | "CANCELLED";
 
 type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
 
 type ApiResponse<T> = {
   success: boolean;
@@ -102,7 +102,12 @@ function formatDate(value: string) {
   return d.toLocaleString();
 }
 
-function statusBadgeVariant(status: OrderStatus) {
+type ApiErrorBody = {
+  message?: string;
+  error?: string;
+};
+
+function statusBadgeVariant(status: OrderStatus): BadgeVariant {
   switch (status) {
     case "PLACED":
       return "secondary";
@@ -119,7 +124,7 @@ function statusBadgeVariant(status: OrderStatus) {
   }
 }
 
-function paymentStatusBadgeVariant(status: PaymentStatus) {
+function paymentStatusBadgeVariant(status: PaymentStatus): BadgeVariant {
   switch (status) {
     case "PAID":
       return "default";
@@ -134,7 +139,7 @@ function paymentStatusBadgeVariant(status: PaymentStatus) {
   }
 }
 
-function readApiError(json: any, fallback: string) {
+function readApiError(json: ApiErrorBody | null | undefined, fallback: string) {
   if (!json) return fallback;
   if (typeof json.message === "string" && json.message.trim())
     return json.message;
@@ -234,9 +239,9 @@ export default function AccountOrdersPage() {
     try {
       const data = await apiListOrders(controller.signal);
       setOrders(data);
-    } catch (e: any) {
-      if (e?.name !== "AbortError")
-        setError(e?.message || "Something went wrong");
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -284,8 +289,8 @@ export default function AccountOrdersPage() {
     try {
       const updated = await apiCancelOrder(id);
       setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
-    } catch (e: any) {
-      setError(e?.message || "Failed to cancel order");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to cancel order");
     } finally {
       setCancelingId(null);
     }
@@ -329,7 +334,11 @@ export default function AccountOrdersPage() {
 
           <Select
             value={status}
-            onValueChange={(v) => setStatus(v as any)}
+            onValueChange={(v) => {
+              if (STATUSES.includes(v as "ALL" | OrderStatus)) {
+                setStatus(v as "ALL" | OrderStatus);
+              }
+            }}
             disabled={loading}
           >
             <SelectTrigger className="w-full md:w-44 rounded-xl">
@@ -402,7 +411,7 @@ export default function AccountOrdersPage() {
                           </div>
                         </div>
                          <Badge
-                            variant={paymentStatusBadgeVariant(o.paymentStatus) as any}
+                            variant={paymentStatusBadgeVariant(o.paymentStatus)}
                             className="text-[10px] h-5"
                           >
                             {o.paymentStatus}
@@ -411,7 +420,7 @@ export default function AccountOrdersPage() {
 
                       <div className="flex items-center justify-between gap-3">
                         <Badge
-                          variant={statusBadgeVariant(o.status) as any}
+                          variant={statusBadgeVariant(o.status)}
                           className={
                             o.status === "CANCELLED"
                               ? "bg-destructive text-destructive-foreground hover:bg-destructive"
@@ -536,7 +545,7 @@ export default function AccountOrdersPage() {
 
                           <td className="py-4 pr-4 whitespace-nowrap">
                             <Badge
-                              variant={statusBadgeVariant(o.status) as any}
+                              variant={statusBadgeVariant(o.status)}
                               className={
                                 o.status === "CANCELLED"
                                   ? "bg-destructive text-destructive-foreground hover:bg-destructive"
@@ -549,7 +558,7 @@ export default function AccountOrdersPage() {
 
                           <td className="py-4 pr-4 whitespace-nowrap">
                             <Badge
-                              variant={paymentStatusBadgeVariant(o.paymentStatus) as any}
+                              variant={paymentStatusBadgeVariant(o.paymentStatus)}
                             >
                               {o.paymentStatus}
                             </Badge>
