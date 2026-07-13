@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getSafeNext } from "@/lib/safe-next";
 
 export default function VerifyEmailClient() {
   const router = useRouter();
@@ -9,7 +10,7 @@ export default function VerifyEmailClient() {
 
   React.useEffect(() => {
     const token = sp.get("token");
-    const next = sp.get("next") || "/";
+    const next = getSafeNext(sp.get("next"));
 
     if (!token) {
       router.replace(`/login?error=${encodeURIComponent("Missing token")}`);

@@ -4,7 +4,6 @@ import Image from "next/image";
 import { CheckCircle2, Quote } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 const featured = {
   badge: "CEO & Founder",

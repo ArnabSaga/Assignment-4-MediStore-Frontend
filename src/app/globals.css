@@ -28,6 +28,15 @@
 
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-button-accent: var(--button-accent);
+  --color-button-accent-foreground: var(--button-accent-foreground);
+  --color-button-primary: var(--button-primary);
+  --color-button-primary-foreground: var(--button-primary-foreground);
+  --color-dashboard-sidebar: var(--dashboard-sidebar);
+  --color-dashboard-sidebar-foreground: var(--dashboard-sidebar-foreground);
+  --color-dashboard-sidebar-muted: var(--dashboard-sidebar-muted);
+  --color-dashboard-sidebar-active: var(--dashboard-sidebar-active);
+  --color-dashboard-sidebar-border: var(--dashboard-sidebar-border);
 
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -94,6 +103,13 @@
   --button-accent-foreground: #0a0a0a;
 
   --ring: #111111;
+
+  /* --dashboard-sidebar: #1292BD; */
+  --dashboard-sidebar: #3e5c76;
+  --dashboard-sidebar-foreground: #ffffff;
+  --dashboard-sidebar-muted: rgba(255, 255, 255, 0.68);
+  --dashboard-sidebar-active: #d6ccc2;
+  --dashboard-sidebar-border: rgba(255, 255, 255, 0.14);
 }
 
 /* ============================
@@ -138,6 +154,12 @@
   --button-accent-foreground: #0a0a0a;
 
   --ring: rgba(255, 255, 255, 0.75);
+
+  --dashboard-sidebar: #3e5c76;
+  --dashboard-sidebar-foreground: #ffffff;
+  --dashboard-sidebar-muted: rgba(255, 255, 255, 0.66);
+  --dashboard-sidebar-active: #d6ccc2;
+  --dashboard-sidebar-border: rgba(255, 255, 255, 0.13);
 }
 
 /* ============================
@@ -149,7 +171,7 @@
   }
 
   html {
-    scrollbar-gutter: stable both-edges;
+    scrollbar-gutter: stable;
     background: var(--background);
   }
 
@@ -508,5 +530,38 @@
 
   .shop-sticky-offset {
     top: 6.25rem;
+  }
+
+  .dashboard-canvas {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--muted) 58%, transparent),
+        color-mix(in oklab, var(--background) 95%, var(--muted))
+      );
+  }
+
+  .dashboard-panel {
+    @apply rounded-2xl border shadow-sm;
+    background-color: color-mix(in oklab, var(--card) 90%, var(--background));
+    border-color: color-mix(in oklab, var(--border) 78%, transparent);
+  }
+
+  .dashboard-table-shell {
+    @apply rounded-2xl border shadow-sm;
+    background-color: color-mix(in oklab, var(--card) 92%, var(--background));
+    border-color: color-mix(in oklab, var(--border) 78%, transparent);
+  }
+
+  .dashboard-mobile-card {
+    @apply rounded-2xl border p-4 shadow-sm;
+    background-color: color-mix(in oklab, var(--card) 92%, var(--background));
+    border-color: color-mix(in oklab, var(--border) 78%, transparent);
+  }
+
+  .dashboard-toolbar {
+    @apply rounded-2xl border p-3 shadow-sm;
+    background-color: color-mix(in oklab, var(--card) 88%, var(--background));
+    border-color: color-mix(in oklab, var(--border) 78%, transparent);
   }
 }

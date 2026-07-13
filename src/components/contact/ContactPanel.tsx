@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Mail, Phone, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { MapPin, Mail, Phone, Send, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,7 +34,7 @@ export function ContactPanel() {
       if (window.innerWidth < 768) {
         successRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    } catch (error) {
+    } catch {
       setSubmitStatus("error");
       toast.error("Failed to send message. Please try again.");
     } finally {

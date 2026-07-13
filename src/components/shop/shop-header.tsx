@@ -120,7 +120,7 @@ export function ShopHeader({ className }: { className?: string }) {
     }, 350);
 
     return () => clearTimeout(t);
-  }, [q, pathname, router, qFromUrl]);
+  }, [q, pathname, router, qFromUrl, searchParams]);
 
   return (
     <section

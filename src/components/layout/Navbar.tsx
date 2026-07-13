@@ -331,7 +331,7 @@ export function Navbar({
                 >
                   <Link href={auth.login.url}>{auth.login.title}</Link>
                 </Button>
-                <Button asChild size="sm" className="rounded-xl h-10 shadow-sm transition-transform hover:scale-105 hover:shadow-md active:scale-95 duration-200 bg-[#1292BD] hover:bg-[#0f7a9f] text-white hover:text-white">
+                <Button asChild size="sm" className="btn-primary rounded-xl h-10 shadow-sm transition-transform hover:scale-105 hover:shadow-md active:scale-95 duration-200">
                   <Link href={auth.signup.url}>{auth.signup.title}</Link>
                 </Button>
               </>
@@ -472,7 +472,7 @@ export function Navbar({
                             {auth.login.title}
                           </Link>
                         </Button>
-                        <Button asChild className="rounded-xl h-12 shadow-md transition-transform active:scale-95 text-base font-medium bg-[#1292BD] hover:bg-[#0f7a9f] text-white hover:text-white">
+                        <Button asChild className="btn-primary rounded-xl h-12 shadow-md transition-transform active:scale-95 text-base font-medium">
                           <Link href={auth.signup.url} onClick={() => setIsMobileOpen(false)}>
                             {auth.signup.title}
                           </Link>

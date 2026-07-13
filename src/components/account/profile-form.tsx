@@ -28,6 +28,10 @@ type MeUser = {
   updatedAt?: string;
 };
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function ProfileForm({ initialMe }: { initialMe: MeUser }) {
   const [me, setMe] = React.useState<MeUser>(initialMe);
 
@@ -53,8 +57,8 @@ export function ProfileForm({ initialMe }: { initialMe: MeUser }) {
       setName(latest.name ?? "");
       setPhone(latest.phone ?? "");
       setImageUrl(latest.image ?? "");
-    } catch (e: any) {
-      setError(e?.message || "Failed to refresh profile");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Failed to refresh profile"));
     }
   };
 
@@ -82,8 +86,8 @@ export function ProfileForm({ initialMe }: { initialMe: MeUser }) {
 
       setSuccess("Saved.");
       await refresh();
-    } catch (e: any) {
-      setError(e?.message || "Failed to save changes");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Failed to save changes"));
     } finally {
       setSaving(false);
     }

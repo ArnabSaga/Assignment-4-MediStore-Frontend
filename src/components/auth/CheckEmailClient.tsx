@@ -7,11 +7,12 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { resendVerificationEmail } from "@/lib/email-verification";
+import { getSafeNext } from "@/lib/safe-next";
 
 export default function CheckEmailClient() {
   const sp = useSearchParams();
   const email = sp.get("email") || "";
-  const next = sp.get("next") || "/";
+  const next = getSafeNext(sp.get("next"));
 
   const [pending, setPending] = React.useState(false);
 
